@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的吧台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+/* ===== CSS 变量 ===== */
+:root {
+  --bg: #0f0f0f;
+  --bg-card: #1a1a1a;
+  --bg-card-hover: #232323;
+  --bg-input: #1c1c1a;
+  --text: #f5f5dc;
+  --text-secondary: #999988;
+  --accent: #d97706;
+  --accent-hover: #e88a1e;
+  --danger: #7c2d12;
+  --success: #5a8f3a;
+  --tab-height: 60px;
+  --font-base: 14px;
+  --font-lg: 18px;
+  --font-xl: 22px;
+  --font-sm: 12px;
+  --radius-card: 12px;
+  --radius-btn: 8px;
+  --btn-min-height: 44px;
+  --font-heading: 'Noto Serif SC', 'Songti SC', '宋体', serif;
+  --font-body: -apple-system, 'PingFang SC', '苹方', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Roboto Mono', 'Courier New', monospace;
+}
+
+/* ===== 全局 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-base);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+input, textarea, select, button {
+  font-family: inherit; font-size: inherit; color: inherit;
+  border: none; outline: none; background: none;
+}
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+input, textarea {
+  background: var(--bg-input);
+  border-radius: var(--radius-btn);
+  padding: 10px 12px;
+  width: 100%;
+  color: var(--text);
+}
+textarea { resize: vertical; min-height: 60px; }
+input:focus, textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
+
+/* ===== 布局 ===== */
+#app { height: 100%; display: flex; flex-direction: column; }
+.tab-content { flex: 1; overflow-y: auto; padding: 16px 16px 80px; display: none; }
+.tab-content.active { display: block; }
+
+/* ===== Tab 栏 ===== */
+.tab-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  height: var(--tab-height);
+  display: flex;
+  background: var(--bg-card);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(10px);
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--text-secondary); font-size: var(--font-sm);
+  transition: color 0.15s;
+}
+.tab-btn .tab-icon { font-size: 20px; margin-bottom: 2px; }
+.tab-btn.active { color: var(--accent); }
+
+/* ===== 卡片 ===== */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+.card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.card-title { font-size: var(--font-lg); font-weight: 600; font-family: var(--font-heading); }
+.card-subtitle { font-size: var(--font-sm); color: var(--text-secondary); }
+.card-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ===== 按钮 ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--btn-min-height); padding: 8px 16px;
+  border-radius: var(--radius-btn); font-weight: 600;
+  transition: all 0.2s ease;
+}
+.btn:active { opacity: 0.7; transform: translateY(1px); }
+.btn:hover { transform: translateY(-2px); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-outline { border: 1px solid var(--text-secondary); color: var(--text); }
+.btn-outline:hover { border-color: var(--text); }
+.btn-sm { min-height: 32px; padding: 4px 10px; font-size: var(--font-sm); }
+.btn-lg { min-height: 52px; padding: 12px 24px; font-size: var(--font-lg); width: 100%; }
+.btn-block { width: 100%; }
+
+/* ===== 标签/徽章 ===== */
+.tag {
+  display: inline-block; padding: 3px 8px; border-radius: 20px;
+  font-size: var(--font-sm); background: rgba(255,255,255,0.08);
+  color: var(--text-secondary); margin: 2px;
+}
+.tag.accent { background: var(--accent); color: #fff; }
+.tag.active { background: rgba(255,107,53,0.2); color: var(--accent); }
+.tag-remove { margin-left: 4px; cursor: pointer; opacity: 0.5; }
+.tag-remove:hover { opacity: 1; }
+
+/* ===== 模态框 ===== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  width: 100%; max-width: 500px; max-height: 90vh;
+  overflow-y: auto; padding: 20px 16px 30px;
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.modal-title { font-size: var(--font-lg); font-weight: 600; font-family: var(--font-heading); }
+.modal-close { font-size: 24px; color: var(--text-secondary); padding: 4px; line-height: 1; }
+
+/* ===== 全屏详情页 ===== */
+.full-page {
+  position: fixed; inset: 0; z-index: 150;
+  background: var(--bg); overflow-y: auto;
+  display: none; flex-direction: column;
+  padding: 16px 16px 40px;
+}
+.full-page.open { display: flex; }
+.page-header {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 16px; position: sticky; top: 0; z-index: 10;
+  background: var(--bg);
+}
+.page-back { font-size: 24px; padding: 4px 8px; color: var(--text); }
+.page-title { font-size: var(--font-xl); font-weight: 600; flex: 1; font-family: var(--font-heading); }
+.page-section { margin-top: 20px; }
+.page-section-title {
+  font-size: var(--font-base); color: var(--text-secondary);
+  margin-bottom: 10px; letter-spacing: 1px;
+  font-family: var(--font-heading);
+}
+
+/* ===== 销售向导步骤 ===== */
+.wizard-step { display: none; }
+.wizard-step.active { display: block; }
+.wizard-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+  margin-top: 12px;
+}
+.wizard-item {
+  background: var(--bg-input); border-radius: var(--radius-btn);
+  padding: 14px 10px; text-align: center; font-weight: 500;
+  transition: background 0.1s;
+}
+.wizard-item:active { background: var(--accent); }
+.wizard-item.selected { background: var(--accent); }
+.wizard-search { margin-bottom: 8px; }
+.quantity-row {
+  display: flex; align-items: center; gap: 16px; margin: 16px 0;
+  justify-content: center;
+}
+.qty-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--bg-input); font-size: 24px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.qty-btn:active { background: var(--accent); }
+.qty-val { font-size: 28px; font-weight: 700; min-width: 40px; text-align: center; }
+
+/* ===== 报表 ===== */
+.stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+.stat-card { background: var(--bg-card); border-radius: var(--radius-card); padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.stat-val { font-size: 24px; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+.stat-label { font-size: var(--font-sm); color: var(--text-secondary); margin-top: 2px; }
+
+.bar-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bar-label { flex: 0 0 70px; font-size: var(--font-sm); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; height: 22px; background: var(--bg-input); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 4px; min-width: 2px; transition: width 0.3s; }
+.bar-value { flex: 0 0 80px; font-size: var(--font-sm); color: var(--text-secondary); text-align: left; }
+
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.filter-row .btn { flex: 0 0 auto; }
+
+/* ===== 日历 ===== */
+.calendar { background: var(--bg-card); border-radius: var(--radius-card); padding: 12px; }
+.cal-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: var(--font-sm); color: var(--text-secondary); margin-bottom: 4px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 6px; font-size: var(--font-sm); }
+.cal-cell.empty { pointer-events: none; }
+.cal-cell.today { border: 1px solid var(--accent); }
+.cal-cell.has-data { background: rgba(255,107,53,0.15); cursor: pointer; }
+.cal-rev { font-size: 9px; color: var(--accent); }
+
+/* ===== 星评 ===== */
+.stars { display: inline-flex; gap: 2px; }
+.star { font-size: 20px; cursor: pointer; color: var(--text-secondary); }
+.star.on { color: #f5a623; }
+
+/* ===== 操作抽屉 ===== */
+.action-sheet-overlay {
+  position: fixed; inset: 0; z-index: 250;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: flex-end; justify-content: center;
+}
+.action-sheet-overlay.open { display: flex; }
+.action-sheet {
+  background: var(--bg-card);
+  border-radius: 16px 16px 0 0;
+  width: 100%; max-width: 500px; padding: 8px 16px 24px;
+}
+.action-sheet-btn {
+  display: block; width: 100%; padding: 14px 0;
+  text-align: center; font-size: var(--font-lg); font-weight: 500;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: var(--text);
+}
+.action-sheet-btn:last-child { border-bottom: none; }
+.action-sheet-btn.danger { color: var(--danger); }
+.action-sheet-btn.cancel { color: var(--text-secondary); font-size: var(--font-base); margin-top: 4px; }
+
+/* ===== 搜索框 ===== */
+.search-box { margin-bottom: 12px; }
+
+/* ===== 评价按钮 ===== */
+.rating-btns { display: flex; gap: 6px; margin-top: 6px; }
+.rating-btn { font-size: 16px; padding: 2px 8px; border-radius: 4px; background: transparent; opacity: 0.3; cursor: pointer; transition: all 0.15s; line-height: 1.4; }
+.rating-btn.on { opacity: 1; }
+.rating-btn.like.on { background: rgba(90,143,58,0.2); }
+.rating-btn.dislike.on { background: rgba(124,45,18,0.2); }
+
+/* ===== Tab 特定样式 ===== */
+.tonight-summary {
+  background: var(--bg-card); border-radius: var(--radius-card);
+  padding: 14px; text-align: center; margin-top: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.tonight-summary .big-num { font-size: 28px; font-weight: 700; font-family: var(--font-mono); }
+.sale-item { border-left: 3px solid var(--accent); }
+.sale-item .card-subtitle { margin-top: 2px; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+/* ===== 引言区域 ===== */
+.quote-area {
+  text-align: center; padding: 32px 20px;
+  background: linear-gradient(180deg, rgba(217,119,6,0.03) 0%, rgba(217,119,6,0.06) 50%, rgba(217,119,6,0.02) 100%);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.02);
+  margin-bottom: 20px;
+  animation: fadeIn 0.6s ease;
+}
+.quote-text {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 1.8;
+  color: rgba(245,245,220,0.82);
+  letter-spacing: 0.5px;
+}
+.quote-author {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: rgba(245,245,220,0.38);
+  margin-top: 14px;
+  letter-spacing: 1px;
+}
+
+/* ===== 数字专用 ===== */
+.big-num, .stat-val, .qty-val, .cal-rev {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+/* ===== 动画 ===== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.tab-content.active {
+  animation: fadeSlideIn 0.3s ease;
+}
+
+.recipe-tags-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+.recommend-card { border-left: 3px solid var(--success); }
+.recommend-reason { font-size: var(--font-sm); color: var(--text-secondary); margin-top: 4px; font-style: italic; }
+
+/* ===== 响应式 - PC 端 ===== */
+@media (min-width: 768px) {
+  body { display: flex; justify-content: center; }
+  #app { max-width: 500px; width: 100%; border-left: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); }
+  .tab-bar { left: calc(50% - 250px); right: calc(50% - 250px); }
+  .modal { border-radius: var(--radius-card); margin: auto; max-height: 80vh; }
+  .modal-overlay { align-items: center; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== Tab 今晚 ===== -->
+<div class="tab-content active" id="tab-tonight">
+  <div id="tonight-area"></div>
+  <div id="tonight-sales"></div>
+  <div id="tonight-footer"></div>
+</div>
+
+<!-- ===== Tab 客人 ===== -->
+<div class="tab-content" id="tab-customers">
+  <div class="filter-row">
+    <button class="btn btn-primary" id="btn-add-customer">+ 新增客人</button>
+  </div>
+  <input class="search-box" id="customer-search" placeholder="搜索客人…">
+  <div id="customers-list"></div>
+</div>
+
+<!-- ===== Tab 配方 ===== -->
+<div class="tab-content" id="tab-recipes">
+  <div class="filter-row">
+    <button class="btn btn-primary" id="btn-add-recipe">+ 新增配方</button>
+    <select id="recipe-tag-filter" style="background:var(--bg-input);border-radius:var(--radius-btn);padding:8px 12px;color:var(--text);">
+      <option value="">全部标签</option>
+    </select>
+  </div>
+  <input class="search-box" id="recipe-search" placeholder="搜索酒名…">
+  <div id="recipes-list"></div>
+</div>
+
+<!-- ===== Tab 报表 ===== -->
+<div class="tab-content" id="tab-reports">
+  <div class="filter-row" id="report-filters">
+    <button class="btn btn-outline btn-sm active" data-period="today">今天</button>
+    <button class="btn btn-outline btn-sm" data-period="week">本周</button>
+    <button class="btn btn-outline btn-sm" data-period="month">本月</button>
+    <button class="btn btn-outline btn-sm" data-period="year">本年</button>
+    <button class="btn btn-outline btn-sm" data-period="custom">自定义</button>
+  </div>
+  <div id="report-custom-dates" style="display:none;margin-bottom:12px;gap:8px;">
+    <input type="date" id="report-date-from">
+    <input type="date" id="report-date-to">
+    <button class="btn btn-primary btn-sm" id="btn-apply-custom">确定</button>
+  </div>
+  <div id="reports-content"></div>
+</div>
+
+<!-- ===== Tab 栏 ===== -->
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="tonight">
+    <span class="tab-icon">🍸</span>今晚
+  </button>
+  <button class="tab-btn" data-tab="customers">
+    <span class="tab-icon">👥</span>客人
+  </button>
+  <button class="tab-btn" data-tab="recipes">
+    <span class="tab-icon">📖</span>配方
+  </button>
+  <button class="tab-btn" data-tab="reports">
+    <span class="tab-icon">📊</span>报表
+  </button>
+</nav>
+
+<!-- ===== 新增销售模态框（三步向导） ===== -->
+<div class="modal-overlay" id="modal-sale">
+  <div class="modal" id="sale-modal-inner">
+    <div class="modal-header">
+      <button class="modal-close" id="sale-close">&times;</button>
+      <span class="modal-title" id="sale-title">新增销售</span>
+      <div style="width:24px"></div>
+    </div>
+    <!-- Step 1: 选客人 -->
+    <div class="wizard-step active" id="sale-step1">
+      <div class="wizard-grid" id="customer-grid">
+        <div class="wizard-item" data-customer-id="" data-customer-name="散客">散客</div>
+      </div>
+    </div>
+    <!-- Step 2: 选酒 -->
+    <div class="wizard-step" id="sale-step2">
+      <input class="wizard-search" id="drink-search" placeholder="搜索酒…">
+      <div class="wizard-grid" id="drink-grid"></div>
+      <button class="btn btn-outline btn-block" style="margin-top:8px" id="btn-manual-drink">手动输入酒名</button>
+      <div id="manual-drink-input" style="display:none;margin-top:8px;">
+        <input id="manual-drink-name" placeholder="酒名">
+        <input id="manual-drink-price" type="number" placeholder="单价" style="margin-top:8px" value="0" step="0.01">
+        <button class="btn btn-primary btn-block" style="margin-top:8px" id="btn-confirm-manual">确认</button>
+        <button class="btn btn-outline btn-sm btn-block" style="margin-top:4px" id="btn-cancel-manual">从配方列表选择</button>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:8px" id="sale-back-to-step1">上一步</button>
+    </div>
+    <!-- Step 3: 确认 -->
+    <div class="wizard-step" id="sale-step3">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:var(--font-lg);font-weight:600" id="sale3-customer"></div>
+        <div style="color:var(--accent);margin-top:4px" id="sale3-drink"></div>
+      </div>
+      <div class="quantity-row">
+        <button class="qty-btn" id="sale-cups-minus">−</button>
+        <span class="qty-val" id="sale-cups">1</span>
+        <button class="qty-btn" id="sale-cups-plus">+</button>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:var(--font-sm);color:var(--text-secondary)">单价 ¥</label>
+        <input type="number" id="sale-price" step="0.01" style="text-align:center;font-size:var(--font-lg);font-weight:600">
+      </div>
+      <div style="text-align:center;font-size:var(--font-lg);margin-bottom:16px">
+        合计 <strong style="color:var(--accent)" id="sale-total">¥0</strong>
+      </div>
+      <button class="btn btn-primary btn-lg" id="sale-save">保存</button>
+      <button class="btn btn-outline btn-sm btn-block" style="margin-top:8px" id="sale-back-to-step2">上一步</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 客人表单模态框 ===== -->
+<div class="modal-overlay" id="modal-customer">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" id="customer-form-close">&times;</button>
+      <span class="modal-title" id="customer-form-title">新增客人</span>
+      <div style="width:24px"></div>
+    </div>
+    <input id="customer-form-name" placeholder="客人名字">
+    <textarea id="customer-form-notes" placeholder="备注（印象、忌口、生日等）" style="margin-top:8px"></textarea>
+    <div style="margin-top:8px">
+      <input id="customer-form-tag-input" placeholder="添加标签，回车确认">
+      <div id="customer-form-tags" style="margin-top:4px"></div>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" id="customer-form-save">保存</button>
+    <input type="hidden" id="customer-form-id">
+  </div>
+</div>
+
+<!-- ===== 配方表单模态框 ===== -->
+<div class="modal-overlay" id="modal-recipe">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" id="recipe-form-close">&times;</button>
+      <span class="modal-title" id="recipe-form-title">新增配方</span>
+      <div style="width:24px"></div>
+    </div>
+    <input id="recipe-form-name" placeholder="酒名">
+    <input id="recipe-form-price" type="number" step="0.01" placeholder="默认价格" style="margin-top:8px">
+    <input id="recipe-form-cost" type="number" step="0.01" placeholder="估算成本" style="margin-top:8px">
+    <div style="margin-top:8px">
+      <label style="font-size:var(--font-sm);color:var(--text-secondary)">基酒类型</label>
+      <div id="recipe-form-base-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+    </div>
+    <div style="margin-top:8px">
+      <label style="font-size:var(--font-sm);color:var(--text-secondary)">口味</label>
+      <div id="recipe-form-flavor-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+    </div>
+    <div style="margin-top:8px">
+      <input id="recipe-form-custom-tag" placeholder="自定义标签，回车确认">
+      <div id="recipe-form-custom-tags" style="margin-top:4px"></div>
+    </div>
+    <textarea id="recipe-form-ingredients" placeholder="配料表" style="margin-top:8px"></textarea>
+    <textarea id="recipe-form-steps" placeholder="调制步骤" style="margin-top:8px"></textarea>
+    <textarea id="recipe-form-notes" placeholder="备注" style="margin-top:8px"></textarea>
+    <button class="btn btn-primary btn-block" style="margin-top:12px" id="recipe-form-save">保存</button>
+    <input type="hidden" id="recipe-form-id">
+  </div>
+</div>
+
+<!-- ===== 日报模态框 ===== -->
+<div class="modal-overlay" id="modal-day-detail">
+  <div class="modal" style="max-height:80vh">
+    <div class="modal-header">
+      <button class="modal-close" id="day-detail-close">&times;</button>
+      <span class="modal-title" id="day-detail-title"></span>
+      <div style="width:24px"></div>
+    </div>
+    <div id="day-detail-content"></div>
+  </div>
+</div>
+
+<!-- ===== 销售操作抽屉 ===== -->
+<div class="action-sheet-overlay" id="action-sheet">
+  <div class="action-sheet">
+    <button class="action-sheet-btn" id="action-edit">编辑</button>
+    <button class="action-sheet-btn danger" id="action-delete">删除这一条</button>
+    <button class="action-sheet-btn cancel" id="action-cancel">取消</button>
+  </div>
+</div>
+
+<!-- ===== 确认弹窗 ===== -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:340px;text-align:center;border-radius:var(--radius-card);margin:auto">
+    <div id="confirm-message" style="font-size:var(--font-base);margin:8px 0 20px;line-height:1.7;color:var(--text)"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" style="flex:1" id="confirm-cancel">取消</button>
+      <button class="btn" style="flex:1" id="confirm-ok">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 提示弹窗 ===== -->
+<div class="modal-overlay" id="modal-alert">
+  <div class="modal" style="max-width:340px;text-align:center;border-radius:var(--radius-card);margin:auto">
+    <div id="alert-message" style="font-size:var(--font-base);margin:8px 0 20px;line-height:1.7;color:var(--text)"></div>
+    <button class="btn btn-primary btn-block" id="alert-ok">我知道了</button>
+  </div>
+</div>
+
+<!-- ===== 客人详情页 ===== -->
+<div class="full-page" id="page-customer-detail">
+  <div class="page-header">
+    <button class="page-back" id="customer-detail-back">&larr;</button>
+    <span class="page-title" id="cd-name"></span>
+    <button class="btn btn-outline btn-sm" id="cd-edit-btn">编辑</button>
+  </div>
+  <div id="cd-content"></div>
+</div>
+
+<!-- ===== 历史日详情页 ===== -->
+<div class="full-page" id="page-day-history">
+  <div class="page-header">
+    <button class="page-back" id="day-history-back">&larr;</button>
+    <span class="page-title" id="dh-title"></span>
+    <div style="width:40px"></div>
+  </div>
+  <div id="dh-summary"></div>
+  <div id="dh-sales"></div>
+  <div id="dh-footer"></div>
+</div>
+
+<!-- ===== 配方详情页 ===== -->
+<div class="full-page" id="page-recipe-detail">
+  <div class="page-header">
+    <button class="page-back" id="recipe-detail-back">&larr;</button>
+    <span class="page-title" id="rd-name"></span>
+    <button class="btn btn-outline btn-sm" id="rd-edit-btn">编辑</button>
+  </div>
+  <div id="rd-content"></div>
+</div>
+
+</div>
+
+<script>
+// ===== 配置（对应 CONFIG.md） =====
+const CONFIG = {
+  recommendCount: 3,
+  weightBaseType: 3,
+  weightFlavor: 2,
+  weightCustom: 1,
+  topFavDrinks: 5,
+  maxRecentCustomers: 12,
+  maxRecentRecipes: 20,
+};
+
+const BASE_LIQUORS = ['金酒','威士忌','朗姆','伏特加','龙舌兰','白兰地','清酒','啤酒','葡萄酒','其他'];
+const FLAVORS = ['甜','苦','酸','sharp','平衡'];
+
+const QUOTES = [
+  { text: "调酒师绝不会背叛吧台对面的客人。", author: "—— 来岛泰三《王牌酒保》" },
+  { text: "真正的调酒师，不是一种职业，而是一种生存方式。", author: "—— 来岛泰三《王牌酒保》" },
+  { text: "Bar 是放酒的木板。只因为旁边有调酒师在，bar 就产生了温柔——这就是 bartender。", author: "—— 《王牌酒保》" },
+  { text: "调酒师不是一日炼成的，也不是独自一人能炼成的。有了客人，调酒师才有归宿。", author: "—— 来岛美和《王牌酒保》" },
+  { text: "马丁尼的表情，就是调酒师的表情。", author: "—— 《王牌酒保》" },
+  { text: "酒吧是灵魂的医院。", author: "—— 北方《王牌酒保》" },
+  { text: "调酒师为客人提供的不是酒——是治愈灵魂的一杯。", author: "—— 《王牌酒保》" },
+  { text: "吧台就是舞台。与其告知三个丑陋的事实，不如说一个漂亮的谎言。", author: "—— 佐佐仓溜《王牌酒保》" },
+  { text: "假如你与世界上所有人为敌，只有一个人与你并肩——你觉得会是谁呢？是调酒师。", author: "—— 来岛泰三《王牌酒保》" },
+  { text: "我希望用美丽的谎言装饰这吧台，而不是丑陋的谎言。", author: "—— 佐佐仓溜《王牌酒保》" },
+  { text: "我喝酒是为了让其他人显得更有趣。", author: "—— 海明威" },
+  { text: "面对亲吻美女、和打开一瓶威士忌的机会——永远不要犹豫。", author: "—— 海明威" },
+  { text: "葡萄酒是世界上最文明的、同时也是最自然的产物之一。", author: "—— 海明威《流动的盛宴》" },
+  { text: "每当我遇到非常糟糕的事情，只要喝上一杯，情况立刻就好转了。", author: "—— 海明威" },
+  { text: "如果我们的语言是威士忌——我只要默默递出酒杯，您接过静静送入喉咙。非常简单、非常亲密、非常准确。", author: "—— 村上春树《如果我们的语言是威士忌》" },
+  { text: "好酒不远行。无论什么酒，在产地喝最够味。", author: "—— 村上春树《如果我们的语言是威士忌》" },
+  { text: "是居住在这里、生活在这里的我们，酿制了这种威士忌。是人们的个性和生活样式，造就了它的味道。", author: "—— 吉姆·麦克尤恩，转引自村上春树《如果我们的语言是威士忌》" },
+  { text: "我可以不抽烟，但不能不喝酒——那会让我一无所有。", author: "—— 丘吉尔" },
+  { text: "我从威士忌得到的，比威士忌从我身上得到的多。", author: "—— 丘吉尔" },
+  { text: "在印度，水不适合直接饮用；为了让它变得可口，我们不得不加点威士忌。", author: "—— 丘吉尔" },
+  { text: "我酗酒太严重，显然拖慢了写作。然而要是不喝酒，我都不知道自己能不能撑过这段时间。", author: "—— 菲茨杰拉德" },
+  { text: "喝酒是件滑稽的事。回头看时我发现，我们所有重要的决定都是在喝酒时做出的。", author: "—— 雷蒙德·卡佛" },
+  { text: "一个人应该保持沉醉——这是人生的立足之处。葡萄酒、诗歌、或者德行，任君自取。重要的是，保持沉醉。", author: "—— 波德莱尔《巴黎的忧郁》" },
+  { text: "酒精也许是人类最大的敌人——但《圣经》说，要爱你的敌人。", author: "—— 弗兰克·辛纳屈" },
+  { text: "世上没有'小杯威士忌'这种东西。", author: "—— 奥利弗·圣约翰·戈格蒂" },
+  { text: "对酒当歌，人生几何？譬如朝露，去日苦多。", author: "—— 曹操《短歌行》" },
+  { text: "兰陵美酒郁金香，玉碗盛来琥珀光。", author: "—— 李白《客中行》" },
+  { text: "晚来天欲雪，能饮一杯无？", author: "—— 白居易《问刘十九》" },
+  { text: "酒逢知己千杯少，话不投机半句多。", author: "—— 欧阳修《春日西湖寄谢法曹歌》" },
+  { text: "莫笑农家腊酒浑，丰年留客足鸡豚。", author: "—— 陆游《游山西村》" }
+];
+
+function randomQuote() {
+  return QUOTES[Math.floor(Math.random() * QUOTES.length)];
+}
+
+// ===== 数据层 =====
+const DB_KEY = 'bar_db_v1';
+const SUPABASE_URL = 'https://ptpqztklyowreyewupaa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0cHF6dGtseW93cmV5ZXd1cGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NDc1MzYsImV4cCI6MjA5NDMyMzUzNn0.qO5pbgWpNEftqO1100n6UoARu9pnDX9KHPmFQnaNoHg';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  db: { schema: 'public' },
+  global: { headers: { 'x-client-info': 'my-bar' } }
+});
+
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { customers: [], recipes: [], sales: [], ratings: [], sessions: [] };
+}
+
+let DB = loadDB();
+
+function dbSave() {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e) {}
+  syncAllSupabase();
+}
+
+function toSnakeCase(obj) {
+  const r = {};
+  for (const k of Object.keys(obj)) {
+    r[k.replace(/[A-Z]/g, m => '_' + m.toLowerCase())] = obj[k];
+  }
+  return r;
+}
+function toCamelCase(obj) {
+  const r = {};
+  for (const k of Object.keys(obj)) {
+    r[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())] = obj[k];
+  }
+  return r;
+}
+
+let _syncTimer = null;
+function syncAllSupabase() {
+  if (!sb) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    try {
+      if (DB.customers.length) await sb.from('customers').upsert(DB.customers.map(toSnakeCase));
+      if (DB.recipes.length) await sb.from('recipes').upsert(DB.recipes.map(toSnakeCase));
+      if (DB.sales.length) await sb.from('sales').upsert(DB.sales.map(toSnakeCase));
+      if (DB.ratings.length) await sb.from('ratings').upsert(DB.ratings.map(toSnakeCase));
+      if (DB.sessions.length) await sb.from('sessions').upsert(DB.sessions.map(toSnakeCase));
+    } catch(e) { console.error('Sync error:', e); }
+  }, 300);
+}
+
+async function syncToSupabase(table, data) {
+  if (!sb) return;
+  try { await sb.from(table).upsert(data); } catch(e) { console.error('Sync error:', e); }
+}
+
+async function deleteFromSupabase(table, id) {
+  if (!sb) return;
+  try { await sb.from(table).delete().eq('id', id); } catch(e) { console.error('Delete error:', e); }
+}
+
+async function loadFromSupabase() {
+  try {
+    const tables = ['customers', 'recipes', 'sales', 'ratings', 'sessions'];
+    const results = await Promise.all(
+      tables.map(t => sb.from(t).select('*').limit(10000))
+    );
+    DB.customers = (results[0].data || []).map(toCamelCase);
+    DB.recipes = (results[1].data || []).map(toCamelCase);
+    DB.sales = (results[2].data || []).map(toCamelCase);
+    DB.ratings = (results[3].data || []).map(toCamelCase);
+    DB.sessions = (results[4].data || []).map(toCamelCase);
+    dbSave();
+    return true;
+  } catch(e) {
+    console.error('Supabase load failed, using localStorage:', e);
+    return false;
+  }
+}
+
+function genId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+// ===== 工具函数 =====
+function $(s) { return document.querySelector(s); }
+function $$(s) { return document.querySelectorAll(s); }
+
+function fmtMoney(n) { return '¥' + Number(n).toFixed(0); }
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDateTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${fmtDate(iso)} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getActiveSession() {
+  return DB.sessions.find(s => !s.endTime) || null;
+}
+
+// ===== 数据 CRUD =====
+function getCustomer(id) { return DB.customers.find(c => c.id === id); }
+function getRecipe(id) { return DB.recipes.find(r => r.id === id); }
+function getCustomerSales(customerId) { return DB.sales.filter(s => s.customerId === customerId); }
+function getRecipeSales(recipeId) { return DB.sales.filter(s => s.recipeId === recipeId); }
+function getSalesBySession(sessionId) { return DB.sales.filter(s => s.sessionId === sessionId); }
+
+function countCustomerVisits(customerId) {
+  const sessionIds = new Set(DB.sales.filter(s => s.customerId === customerId).map(s => s.sessionId));
+  return sessionIds.size;
+}
+
+function customerTotalSpent(customerId) {
+  return DB.sales.filter(s => s.customerId === customerId).reduce((sum, s) => sum + s.total, 0);
+}
+
+function customerLastVisit(customerId) {
+  const sales = DB.sales.filter(s => s.customerId === customerId).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return sales.length > 0 ? sales[0].createdAt : null;
+}
+
+function deleteCustomer(id) {
+  showConfirm('确定删除这位客人？相关销售记录会保留。', true, () => {
+    DB.customers = DB.customers.filter(c => c.id !== id);
+    dbSave();
+    deleteFromSupabase('customers', id);
+    $('#page-customer-detail').classList.remove('open');
+    renderCustomers();
+  });
+}
+
+function deleteRecipe(id) {
+  showConfirm('确定删除这个配方？相关销售记录和评价都会保留。', true, () => {
+    DB.recipes = DB.recipes.filter(r => r.id !== id);
+    dbSave();
+    deleteFromSupabase('recipes', id);
+    $('#page-recipe-detail').classList.remove('open');
+    renderRecipes();
+  });
+}
+
+// ===== 推荐引擎 =====
+function getCustomerProfile(customerId) {
+  const sales = DB.sales.filter(s => s.customerId === customerId && s.recipeId && s.rating === 'like');
+  const profile = { baseTypes: {}, flavors: {}, customTags: {}, totalCups: 0 };
+
+  for (const sale of sales) {
+    const recipe = getRecipe(sale.recipeId);
+    if (!recipe) continue;
+    profile.totalCups += sale.cups;
+    for (const tag of recipe.tags) {
+      if (BASE_LIQUORS.includes(tag)) {
+        profile.baseTypes[tag] = (profile.baseTypes[tag] || 0) + sale.cups;
+      } else if (FLAVORS.includes(tag)) {
+        profile.flavors[tag] = (profile.flavors[tag] || 0) + sale.cups;
+      } else {
+        profile.customTags[tag] = (profile.customTags[tag] || 0) + sale.cups;
+      }
+    }
+  }
+  return profile;
+}
+
+function hasLikedDrinks(customerId) {
+  return DB.sales.some(s => s.customerId === customerId && s.recipeId && s.rating === 'like');
+}
+
+function getLikedDrinks(customerId, n) {
+  const sales = DB.sales.filter(s => s.customerId === customerId && s.recipeId && s.rating === 'like');
+  const counts = {};
+  for (const sale of sales) {
+    counts[sale.recipeId] = (counts[sale.recipeId] || 0) + sale.cups;
+  }
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([recipeId, cups]) => ({ recipe: getRecipe(recipeId), cups }));
+}
+
+function recommendDrinks(customerId, count) {
+  count = count || CONFIG.recommendCount;
+  if (!hasLikedDrinks(customerId)) return [];
+
+  const profile = getCustomerProfile(customerId);
+  const triedIds = new Set(DB.sales.filter(s => s.customerId === customerId && s.recipeId).map(s => s.recipeId));
+  const dislikedIds = new Set(DB.sales.filter(s => s.customerId === customerId && s.recipeId && s.rating === 'dislike').map(s => s.recipeId));
+
+  const candidates = [];
+  for (const recipe of DB.recipes) {
+    if (triedIds.has(recipe.id) || dislikedIds.has(recipe.id)) continue;
+    let score = 0;
+    const matchedTags = [];
+    for (const tag of recipe.tags) {
+      let w = 0;
+      if (profile.baseTypes[tag]) w = profile.baseTypes[tag] * CONFIG.weightBaseType;
+      else if (profile.flavors[tag]) w = profile.flavors[tag] * CONFIG.weightFlavor;
+      else if (profile.customTags[tag]) w = profile.customTags[tag] * CONFIG.weightCustom;
+      if (w > 0) { score += w; matchedTags.push(tag); }
+    }
+    if (score > 0) candidates.push({ recipe, score, matchedTags });
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates.slice(0, count).map(c => ({
+    ...c.recipe,
+    _reason: genReason(profile, c.recipe, c.matchedTags)
+  }));
+}
+
+function genReason(profile, recipe, matchedTags) {
+  const baseMatch = matchedTags.find(t => BASE_LIQUORS.includes(t));
+  const flavorMatch = matchedTags.find(t => FLAVORS.includes(t));
+  if (baseMatch && flavorMatch) return `你常喝${baseMatch}基酒且偏爱${flavorMatch}口味，这杯组合类似`;
+  if (baseMatch) return `你常喝${baseMatch}基酒，这杯也是${baseMatch}为基酒`;
+  if (flavorMatch) return `你偏爱${flavorMatch}口味，这杯风味相近`;
+  return '基于你的口味偏好推荐';
+}
+
+// ===== 共享销售卡片 =====
+function renderSaleCard(s) {
+  const r = s.rating;
+  return `
+    <div class="card sale-item" data-sale-id="${s.id}" style="cursor:pointer">
+      <div class="card-header">
+        <span class="card-title">${escHtml(s.recipeName)}</span>
+        <span style="font-weight:600;color:var(--accent);font-family:var(--font-mono)">${fmtMoney(s.total)}</span>
+      </div>
+      <div class="card-subtitle">
+        ${escHtml(s.customerName)} · ${s.cups}杯 × ${fmtMoney(s.unitPrice)}
+        <span style="float:right">${new Date(s.createdAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div class="rating-btns">
+        <span class="rating-btn like ${r==='like'?'on':''}" data-action="like" data-sale-id="${s.id}">👍</span>
+        <span class="rating-btn dislike ${r==='dislike'?'on':''}" data-action="dislike" data-sale-id="${s.id}">👎</span>
+        <span class="rating-btn neutral ${r===null?'on':''}" data-action="neutral" data-sale-id="${s.id}">⏺</span>
+      </div>
+    </div>`;
+}
+
+function toggleRating(saleId, action) {
+  const sale = DB.sales.find(s => s.id === saleId);
+  if (!sale) return;
+  if (action === 'like') sale.rating = sale.rating === 'like' ? null : 'like';
+  else if (action === 'dislike') sale.rating = sale.rating === 'dislike' ? null : 'dislike';
+  else sale.rating = null;
+  dbSave();
+}
+
+// ===== 渲染：今晚 Tab =====
+function renderTonight() {
+  const area = $('#tonight-area');
+  const session = getActiveSession();
+
+  if (!session) {
+    const q = randomQuote();
+    area.innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:var(--font-xl);font-weight:600;margin-bottom:4px;font-family:var(--font-heading)">我的吧台</div>
+        <div style="color:var(--text-secondary)">${todayStr()}</div>
+      </div>
+      <div class="quote-area">
+        <div class="quote-text">${escHtml(q.text)}</div>
+        <div class="quote-author">${escHtml(q.author)}</div>
+      </div>
+      <button class="btn btn-primary btn-lg" id="btn-start-session">开始营业</button>
+    `;
+    $('#tonight-sales').innerHTML = '';
+    $('#tonight-footer').innerHTML = '';
+    return;
+  }
+
+  const sales = getSalesBySession(session.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const totalCups = sales.reduce((s, x) => s + x.cups, 0);
+  const totalMoney = sales.reduce((s, x) => s + x.total, 0);
+
+  area.innerHTML = `
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:var(--font-xl);font-weight:600;margin-bottom:4px;font-family:var(--font-heading)">我的吧台</div>
+      <div style="color:var(--text-secondary)">${session.date} · 营业中</div>
+    </div>
+  `;
+
+  let salesHTML = '';
+  if (sales.length === 0) {
+    const q = randomQuote();
+    salesHTML = `<div class="quote-area">
+      <div class="quote-text">${escHtml(q.text)}</div>
+      <div class="quote-author">${escHtml(q.author)}</div>
+    </div>`;
+  } else {
+    salesHTML = sales.map(s => renderSaleCard(s)).join('');
+  }
+  $('#tonight-sales').innerHTML = salesHTML;
+
+  $('#tonight-footer').innerHTML = `
+    <div class="tonight-summary">
+      <span style="color:var(--text-secondary)">今晚 </span>
+      <span class="big-num" style="color:var(--text)">${totalCups}</span>
+      <span style="color:var(--text-secondary)"> 杯 · </span>
+      <span class="big-num" style="color:var(--accent)">${fmtMoney(totalMoney)}</span>
+    </div>
+    <button class="btn btn-primary btn-lg" style="margin-top:10px" id="btn-add-sale">+ 新增销售</button>
+    <button class="btn btn-outline btn-block" style="margin-top:6px;color:var(--danger);border-color:var(--danger)" id="btn-end-session">打烊</button>
+  `;
+}
+
+// ===== 渲染：客人 Tab =====
+function renderCustomers() {
+  const search = ($('#customer-search').value || '').toLowerCase();
+  let customers = DB.customers;
+  if (search) {
+    customers = customers.filter(c => c.name.toLowerCase().includes(search) || (c.tags || []).some(t => t.toLowerCase().includes(search)));
+  }
+  customers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (customers.length === 0) {
+    $('#customers-list').innerHTML = '<div class="empty-state"><div class="icon">👤</div><div>还没有客人，点击上方按钮新增</div></div>';
+    return;
+  }
+
+  $('#customers-list').innerHTML = customers.map(c => {
+    const visits = countCustomerVisits(c.id);
+    const spent = customerTotalSpent(c.id);
+    const last = customerLastVisit(c.id);
+    return `
+      <div class="card customer-card" data-id="${c.id}">
+        <div class="card-header">
+          <span class="card-title">${escHtml(c.name)}</span>
+        </div>
+        <div class="card-subtitle">
+          ${last ? '上次来 ' + fmtDate(last) : '新客人'}
+          · ${visits}次消费 · ${fmtMoney(spent)}
+        </div>
+        ${(c.tags || []).length > 0 ? `<div style="margin-top:4px">${(c.tags||[]).map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== 渲染：配方 Tab =====
+function renderRecipes() {
+  const tagFilter = $('#recipe-tag-filter').value;
+  const search = ($('#recipe-search').value || '').toLowerCase();
+  let recipes = DB.recipes;
+
+  if (tagFilter) {
+    recipes = recipes.filter(r => (r.tags || []).includes(tagFilter));
+  }
+  if (search) {
+    recipes = recipes.filter(r => r.name.toLowerCase().includes(search) || (r.tags || []).some(t => t.toLowerCase().includes(search)));
+  }
+  recipes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // 更新标签过滤器
+  const allTags = new Set();
+  DB.recipes.forEach(r => (r.tags || []).forEach(t => allTags.add(t)));
+  const currentVal = $('#recipe-tag-filter').value;
+  $('#recipe-tag-filter').innerHTML = '<option value="">全部标签</option>' +
+    [...allTags].sort().map(t => `<option value="${escHtml(t)}" ${t===currentVal?'selected':''}>${escHtml(t)}</option>`).join('');
+
+  if (recipes.length === 0) {
+    $('#recipes-list').innerHTML = '<div class="empty-state"><div class="icon">📖</div><div>还没有配方，点击上方按钮新增</div></div>';
+    return;
+  }
+
+  $('#recipes-list').innerHTML = recipes.map(r => {
+    const orderCount = DB.sales.filter(s => s.recipeId === r.id).reduce((sum, s) => sum + s.cups, 0);
+    return `
+      <div class="card recipe-card" data-id="${r.id}">
+        <div class="card-header">
+          <span class="card-title">${escHtml(r.name)}</span>
+          <span style="font-weight:600;color:var(--accent);font-family:var(--font-mono)">${fmtMoney(r.defaultPrice)}</span>
+        </div>
+        <div class="recipe-tags-row">
+          ${(r.tags || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+        </div>
+        <div class="card-subtitle" style="margin-top:4px;display:flex;gap:12px">
+          <span>成本 ${fmtMoney(r.estimatedCost || 0)}</span>
+          <span style="color:var(--accent);font-family:var(--font-mono)">利润 ${fmtMoney(r.defaultPrice - (r.estimatedCost || 0))}</span>
+          <span style="margin-left:auto">点过 ${orderCount} 次</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== 渲染：报表 Tab =====
+let reportPeriod = 'today';
+let reportCustomFrom = null;
+let reportCustomTo = null;
+
+function getReportRange() {
+  const now = new Date();
+  let from, to;
+  switch (reportPeriod) {
+    case 'today':
+      from = todayStr();
+      to = todayStr();
+      break;
+    case 'week': {
+      const d = new Date(now);
+      d.setDate(d.getDate() - d.getDay() + 1); // Monday
+      from = fmtDate(d.toISOString());
+      to = todayStr();
+      break;
+    }
+    case 'month':
+      from = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+      to = todayStr();
+      break;
+    case 'year':
+      from = `${now.getFullYear()}-01-01`;
+      to = todayStr();
+      break;
+    case 'custom':
+      from = reportCustomFrom || todayStr();
+      to = reportCustomTo || todayStr();
+      break;
+  }
+  return { from, to };
+}
+
+function renderReports() {
+  const { from, to } = getReportRange();
+  const sales = DB.sales.filter(s => {
+    const d = s.createdAt ? s.createdAt.slice(0, 10) : '';
+    return d >= from && d <= to;
+  });
+
+  const totalMoney = sales.reduce((s, x) => s + x.total, 0);
+  const totalCups = sales.reduce((s, x) => s + x.cups, 0);
+  const totalCost = sales.reduce((s, x) => s + (x.recipeCostAtSale || 0) * x.cups, 0);
+  const totalProfit = sales.reduce((s, x) => s + (x.recipeProfitAtSale || 0) * x.cups, 0);
+  const margin = totalMoney > 0 ? (totalProfit / totalMoney * 100) : 0;
+  const customerSet = new Set(sales.filter(s => s.customerId).map(s => s.customerId));
+  const guestCount = customerSet.size + sales.filter(s => !s.customerId).length;
+  const avgPerCustomer = guestCount > 0 ? totalMoney / guestCount : 0;
+
+  let html = '';
+
+  // 统计卡片
+  html += `<div class="stat-grid">
+    <div class="stat-card"><div class="stat-val">${fmtMoney(totalMoney)}</div><div class="stat-label">总流水</div></div>
+    <div class="stat-card"><div class="stat-val">${fmtMoney(totalProfit)}</div><div class="stat-label">总利润</div></div>
+    <div class="stat-card"><div class="stat-val">${fmtMoney(totalCost)}</div><div class="stat-label">总成本</div></div>
+    <div class="stat-card"><div class="stat-val">${margin.toFixed(1)}%</div><div class="stat-label">毛利率</div></div>
+    <div class="stat-card"><div class="stat-val">${totalCups}</div><div class="stat-label">总杯数</div></div>
+    <div class="stat-card"><div class="stat-val">${guestCount}</div><div class="stat-label">客流量</div></div>
+  </div>`;
+
+  // Top 5 酒
+  const drinkCounts = {};
+  sales.forEach(s => { drinkCounts[s.recipeName] = (drinkCounts[s.recipeName] || 0) + s.cups; });
+  const topDrinks = Object.entries(drinkCounts).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const maxDrink = topDrinks.length > 0 ? topDrinks[0][1] : 1;
+
+  html += '<div class="page-section-title">🏆 销量 Top 5 酒</div>';
+  if (topDrinks.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">暂无数据</div></div>';
+  } else {
+    html += topDrinks.map(([name, cups]) => {
+      const money = sales.filter(s => s.recipeName === name).reduce((s,x) => s+x.total, 0);
+      return `<div class="bar-item">
+        <span class="bar-label">${escHtml(name)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(cups/maxDrink*100).toFixed(0)}%"></div></div>
+        <span class="bar-value">${cups}杯 ${fmtMoney(money)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Top 5 客人
+  const custSpending = {};
+  sales.forEach(s => {
+    const key = s.customerId || '散客';
+    custSpending[key] = (custSpending[key] || 0) + s.total;
+  });
+  const topCusts = Object.entries(custSpending)
+    .map(([id, spent]) => ({ id, name: id === '散客' ? '散客' : (getCustomer(id)?.name || '未知'), spent }))
+    .sort((a,b) => b.spent - a.spent).slice(0, 5);
+  const maxCust = topCusts.length > 0 ? topCusts[0].spent : 1;
+
+  html += '<div class="page-section-title" style="margin-top:16px">👥 客流 Top 5</div>';
+  if (topCusts.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">暂无数据</div></div>';
+  } else {
+    html += topCusts.map(c => `
+      <div class="bar-item">
+        <span class="bar-label">${escHtml(c.name)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(c.spent/maxCust*100).toFixed(0)}%"></div></div>
+        <span class="bar-value">${fmtMoney(c.spent)}</span>
+      </div>
+    `).join('');
+  }
+
+  // 标签销量分析
+  const tagCounts = {};
+  sales.forEach(s => {
+    if (!s.recipeId) return;
+    const recipe = getRecipe(s.recipeId);
+    if (!recipe) return;
+    (recipe.tags || []).forEach(t => {
+      tagCounts[t] = (tagCounts[t] || 0) + s.cups;
+    });
+  });
+  const topTags = Object.entries(tagCounts).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const maxTag = topTags.length > 0 ? topTags[0][1] : 1;
+
+  html += '<div class="page-section-title" style="margin-top:16px">📈 标签销量分析</div>';
+  if (topTags.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">暂无数据</div></div>';
+  } else {
+    html += topTags.map(([tag, cups]) => `
+      <div class="bar-item">
+        <span class="bar-label tag">${escHtml(tag)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(cups/maxTag*100).toFixed(0)}%"></div></div>
+        <span class="bar-value">${cups}杯</span>
+      </div>
+    `).join('');
+  }
+
+  // 营业日历
+  html += '<div class="page-section-title" style="margin-top:16px">📅 营业日历</div>';
+  html += renderCalendar();
+
+  html += '<div style="margin-top:60px;text-align:center"><span style="font-size:11px;color:rgba(153,153,136,0.25);cursor:pointer" id="btn-clear-all">清空营业记录</span></div>';
+
+  $('#reports-content').innerHTML = html;
+}
+
+function renderCalendar() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-based
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDow = firstDay.getDay() || 7; // Mon=1..Sun=7
+  const daysInMonth = lastDay.getDate();
+
+  // 每日流水
+  const dailyRevenue = {};
+  for (const session of DB.sessions) {
+    const d = session.date;
+    const sessionSales = DB.sales.filter(s => s.sessionId === session.id);
+    dailyRevenue[d] = (dailyRevenue[d] || 0) + sessionSales.reduce((s, x) => s + x.total, 0);
+  }
+
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  let html = `<div class="calendar">
+    <div class="cal-header-row">
+      <span style="font-weight:600">${year}年 ${monthNames[month]}</span>
+    </div>
+    <div class="cal-dow">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+    </div>
+    <div class="cal-grid">`;
+
+  for (let i = 1; i < startDow; i++) {
+    html += '<div class="cal-cell empty"></div>';
+  }
+
+  const today = todayStr();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const rev = dailyRevenue[dateStr] || 0;
+    const isToday = dateStr === today;
+    html += `<div class="cal-cell${isToday ? ' today' : ''}${rev > 0 ? ' has-data' : ''}" data-date="${dateStr}">
+      <span class="cal-day">${d}</span>
+      ${rev > 0 ? `<span class="cal-rev">${fmtMoney(rev)}</span>` : ''}
+    </div>`;
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+let historyDay = null;
+
+function showDayHistory(dateStr) {
+  historyDay = dateStr;
+  $('#dh-title').textContent = dateStr;
+  $('#page-day-history').classList.add('open');
+  renderDayHistory();
+}
+
+function renderDayHistory() {
+  const dateStr = historyDay;
+  if (!dateStr) return;
+  const daySales = DB.sales.filter(s => s.createdAt && s.createdAt.slice(0, 10) === dateStr)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const totalCups = daySales.reduce((s, x) => s + x.cups, 0);
+  const totalMoney = daySales.reduce((s, x) => s + x.total, 0);
+  const dayCost = daySales.reduce((s, x) => s + (x.recipeCostAtSale || 0) * x.cups, 0);
+  const dayProfit = daySales.reduce((s, x) => s + (x.recipeProfitAtSale || 0) * x.cups, 0);
+
+  $('#dh-summary').innerHTML = `
+    <div class="stat-grid" style="margin:0 0 12px">
+      <div class="stat-card"><div class="stat-val">${fmtMoney(totalMoney)}</div><div class="stat-label">总流水</div></div>
+      <div class="stat-card"><div class="stat-val">${fmtMoney(dayProfit)}</div><div class="stat-label">总利润</div></div>
+      <div class="stat-card"><div class="stat-val">${fmtMoney(dayCost)}</div><div class="stat-label">总成本</div></div>
+      <div class="stat-card"><div class="stat-val">${totalCups}</div><div class="stat-label">总杯数</div></div>
+    </div>`;
+
+  if (daySales.length === 0) {
+    $('#dh-sales').innerHTML = '<div class="empty-state" style="padding:12px"><div>当天没有销售记录</div></div>';
+  } else {
+    $('#dh-sales').innerHTML = daySales.map(s => renderSaleCard(s)).join('');
+  }
+
+  $('#dh-footer').innerHTML = `
+    <button class="btn btn-primary btn-lg" style="margin-top:8px" id="btn-history-add">+ 补录这天的销售</button>`;
+}
+
+// ===== 渲染：客人详情页 =====
+function showCustomerDetail(id) {
+  const c = getCustomer(id);
+  if (!c) return;
+
+  $('#cd-name').textContent = c.name;
+  $('#page-customer-detail').classList.add('open');
+  $('#page-customer-detail').dataset.id = id;
+
+  const visits = countCustomerVisits(c.id);
+  const spent = customerTotalSpent(c.id);
+  const last = customerLastVisit(c.id);
+  const likedDrinks = getLikedDrinks(id, CONFIG.topFavDrinks);
+  const recs = recommendDrinks(id);
+
+  // 消费历史：按 session 分组
+  const sales = DB.sales.filter(s => s.customerId === id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const sessionGroups = {};
+  sales.forEach(s => {
+    const d = s.createdAt ? s.createdAt.slice(0, 10) : '未知';
+    if (!sessionGroups[d]) sessionGroups[d] = [];
+    sessionGroups[d].push(s);
+  });
+
+  let html = '';
+
+  // 基础信息
+  html += `<div class="card">
+    <div><span style="color:var(--text-secondary)">第一次来：</span>${fmtDate(c.createdAt)}</div>
+    <div style="margin-top:4px"><span style="color:var(--text-secondary)">上次来：</span>${last ? fmtDate(last) : '无'}</div>
+    <div style="margin-top:4px"><span style="color:var(--text-secondary)">消费：</span>${visits}次 · ${fmtMoney(spent)}</div>
+    ${(c.tags || []).length > 0 ? `<div style="margin-top:4px">${(c.tags||[]).map(t => `<span class="tag accent">${escHtml(t)}</span>`).join('')}</div>` : ''}
+    ${c.notes ? `<div style="margin-top:8px;white-space:pre-wrap;color:var(--text-secondary)">${escHtml(c.notes)}</div>` : ''}
+  </div>`;
+
+  // 他爱喝的
+  html += '<div class="page-section"><div class="page-section-title">❤️ 他爱喝的</div>';
+  if (likedDrinks.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">还没有标记爱喝的酒</div></div>';
+  } else {
+    html += likedDrinks.map(d => `
+      <div class="card" style="border-left:3px solid var(--accent)">
+        <div class="card-header">
+          <span class="card-title">${escHtml(d.recipe?.name || '未知')}</span>
+          <span>👍${d.cups}次</span>
+        </div>
+        ${d.recipe ? `<div class="recipe-tags-row">${(d.recipe.tags||[]).map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    `).join('');
+  }
+  html += '</div>';
+
+  // 推荐给他
+  html += '<div class="page-section"><div class="page-section-title">💡 推荐给他</div>';
+  if (!hasLikedDrinks(id)) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">等更多反馈后再给推荐</div></div>';
+  } else if (recs.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">暂无推荐（需要更多配方或消费数据）</div></div>';
+  } else {
+    html += recs.map(r => `
+      <div class="card recommend-card">
+        <div class="card-header">
+          <span class="card-title">${escHtml(r.name)}</span>
+          <span style="color:var(--accent)">${fmtMoney(r.defaultPrice)}</span>
+        </div>
+        <div class="recipe-tags-row">${(r.tags||[]).map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}</div>
+        <div class="recommend-reason">${r._reason}</div>
+      </div>
+    `).join('');
+  }
+  html += '</div>';
+
+  // 消费历史
+  html += '<div class="page-section"><div class="page-section-title">📋 消费历史</div>';
+  const sessions = Object.keys(sessionGroups).sort().reverse();
+  if (sessions.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">暂无</div></div>';
+  } else {
+    sessions.forEach(date => {
+      const daySales = sessionGroups[date];
+      const dayTotal = daySales.reduce((s, x) => s + x.total, 0);
+      html += `<div class="card">
+        <div class="card-header">
+          <span><strong>${date}</strong></span>
+          <span style="color:var(--accent)">${fmtMoney(dayTotal)}</span>
+        </div>
+        ${daySales.map(s => `<div class="card-subtitle">${escHtml(s.recipeName)} × ${s.cups}杯</div>`).join('')}
+      </div>`;
+    });
+  }
+  html += '</div>';
+
+  html += '<button class="btn btn-danger btn-block" style="margin-top:16px" id="cd-delete-btn">删除客人</button>';
+
+  $('#cd-content').innerHTML = html;
+
+  $('#cd-delete-btn').addEventListener('click', () => deleteCustomer(id));
+}
+
+// ===== 渲染：配方详情页 =====
+function showRecipeDetail(id) {
+  const r = getRecipe(id);
+  if (!r) return;
+
+  $('#rd-name').textContent = r.name;
+  $('#page-recipe-detail').classList.add('open');
+  $('#page-recipe-detail').dataset.id = id;
+
+  let html = '';
+
+  // 基础信息
+  const rCost = r.estimatedCost || 0;
+  const rProfit = r.defaultPrice - rCost;
+  html += `<div class="card">
+    <div><span style="color:var(--text-secondary)">售价：</span><span style="font-family:var(--font-mono)">${fmtMoney(r.defaultPrice)}</span></div>
+    <div style="margin-top:2px"><span style="color:var(--text-secondary)">成本：</span>${fmtMoney(rCost)}</div>
+    <div style="margin-top:2px"><span style="color:var(--text-secondary)">利润：</span><span style="color:var(--accent);font-family:var(--font-mono)">${fmtMoney(rProfit)}</span></div>
+    <div style="margin-top:4px">${(r.tags||[]).map(t => `<span class="tag accent">${escHtml(t)}</span>`).join(' ')}</div>
+    ${r.ingredients ? `<div style="margin-top:8px"><span style="color:var(--text-secondary)">配料：</span><pre style="white-space:pre-wrap;margin-top:2px;font-family:inherit">${escHtml(r.ingredients)}</pre></div>` : ''}
+    ${r.steps ? `<div style="margin-top:8px"><span style="color:var(--text-secondary)">步骤：</span><pre style="white-space:pre-wrap;margin-top:2px;font-family:inherit">${escHtml(r.steps)}</pre></div>` : ''}
+    ${r.notes ? `<div style="margin-top:8px"><span style="color:var(--text-secondary)">备注：</span><pre style="white-space:pre-wrap;margin-top:2px;font-family:inherit">${escHtml(r.notes)}</pre></div>` : ''}
+  </div>`;
+
+  // 谁点过这杯
+  const recipeSales = getRecipeSales(id);
+  const customerCounts = {};
+  recipeSales.forEach(s => {
+    const key = s.customerId || '散客';
+    if (!customerCounts[key]) customerCounts[key] = { name: s.customerName, cups: 0 };
+    customerCounts[key].cups += s.cups;
+  });
+  const customerList = Object.entries(customerCounts).sort((a, b) => b[1].cups - a[1].cups);
+
+  html += '<div class="page-section"><div class="page-section-title">👥 谁点过这杯</div>';
+  if (customerList.length === 0) {
+    html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">还没有人点过</div></div>';
+  } else {
+    html += customerList.map(([cid, info]) => {
+      const rating = DB.ratings.find(rt => rt.customerId === cid && rt.recipeId === id);
+      const starHtml = renderStars(rating ? rating.stars : 0, cid, id);
+      return `<div class="card">
+        <div class="card-header">
+          <span class="card-title">${escHtml(info.name)}</span>
+          <span style="color:var(--text-secondary)">${info.cups}杯</span>
+        </div>
+        <div style="margin-top:4px">
+          <span style="font-size:var(--font-sm);color:var(--text-secondary)">评价：</span>
+          ${starHtml}
+        </div>
+        <div style="margin-top:4px">
+          <input class="rating-note" data-customer="${cid}" data-recipe="${id}" placeholder="添加评价备注…" value="${escHtml(rating?.note || '')}" style="font-size:var(--font-sm)">
+        </div>
+      </div>`;
+    }).join('');
+  }
+  html += '</div>';
+
+  html += '<button class="btn btn-danger btn-block" style="margin-top:16px" id="rd-delete-btn">删除配方</button>';
+
+  $('#rd-content').innerHTML = html;
+
+  $('#rd-delete-btn').addEventListener('click', () => deleteRecipe(id));
+
+  // 绑定星评事件
+  $$('#rd-content .star').forEach(el => {
+    el.addEventListener('click', function() {
+      const customerId = this.dataset.customer;
+      const recipeId = this.dataset.recipe;
+      const stars = parseInt(this.dataset.stars);
+      setRating(customerId, recipeId, stars);
+      showRecipeDetail(id);
+    });
+  });
+
+  // 绑定备注输入
+  $$('#rd-content .rating-note').forEach(el => {
+    el.addEventListener('change', function() {
+      const customerId = this.dataset.customer;
+      const recipeId = this.dataset.recipe;
+      saveRatingNote(customerId, recipeId, this.value);
+    });
+  });
+}
+
+function renderStars(stars, customerId, recipeId) {
+  let html = '<span class="stars">';
+  for (let i = 1; i <= 5; i++) {
+    html += `<span class="star ${i <= stars ? 'on' : ''}" data-stars="${i}" data-customer="${customerId}" data-recipe="${recipeId}">${i <= stars ? '★' : '☆'}</span>`;
+  }
+  html += '</span>';
+  return html;
+}
+
+function setRating(customerId, recipeId, stars) {
+  let r = DB.ratings.find(rt => rt.customerId === customerId && rt.recipeId === recipeId);
+  if (r) {
+    r.stars = stars;
+    r.createdAt = new Date().toISOString();
+  } else {
+    DB.ratings.push({
+      id: genId(),
+      customerId,
+      recipeId,
+      stars,
+      note: '',
+      createdAt: new Date().toISOString()
+    });
+  }
+  dbSave();
+}
+
+function saveRatingNote(customerId, recipeId, note) {
+  let r = DB.ratings.find(rt => rt.customerId === customerId && rt.recipeId === recipeId);
+  if (r) {
+    r.note = note;
+  } else {
+    DB.ratings.push({
+      id: genId(),
+      customerId,
+      recipeId,
+      stars: 0,
+      note,
+      createdAt: new Date().toISOString()
+    });
+  }
+  dbSave();
+}
+
+// ===== 自定义弹窗 =====
+function showConfirm(msg, danger, callback) {
+  $('#confirm-message').textContent = msg;
+  $('#confirm-ok').className = danger ? 'btn btn-danger' : 'btn btn-primary';
+  $('#confirm-ok').style.flex = '1';
+  $('#modal-confirm').classList.add('open');
+  $('#confirm-ok').onclick = function() {
+    $('#modal-confirm').classList.remove('open');
+    if (callback) callback();
+  };
+  $('#confirm-cancel').onclick = function() {
+    $('#modal-confirm').classList.remove('open');
+  };
+}
+
+function showAlert(msg) {
+  $('#alert-message').textContent = msg;
+  $('#modal-alert').classList.add('open');
+  $('#alert-ok').onclick = function() {
+    $('#modal-alert').classList.remove('open');
+  };
+}
+
+// ===== 工具 =====
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== Tab 切换 =====
+function switchTab(tab) {
+  $$('.tab-content').forEach(el => el.classList.remove('active'));
+  $$('.tab-btn').forEach(el => el.classList.remove('active'));
+  $(`#tab-${tab}`).classList.add('active');
+  $(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+
+  if (tab === 'tonight') renderTonight();
+  else if (tab === 'customers') renderCustomers();
+  else if (tab === 'recipes') renderRecipes();
+  else if (tab === 'reports') renderReports();
+}
+
+// ===== 事件绑定 =====
+function bindEvents() {
+  // Tab 按钮
+  $$('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // 今晚：开始营业
+  $('#tonight-area').addEventListener('click', e => {
+    if (e.target.id === 'btn-start-session') {
+      const session = {
+        id: genId(),
+        date: todayStr(),
+        startTime: new Date().toISOString(),
+        endTime: null
+      };
+      DB.sessions.push(session);
+      dbSave();
+      renderTonight();
+    }
+  });
+
+  // 今晚：打烊 & 新增销售（统一委托在 footer）
+  $('#tonight-footer').addEventListener('click', e => {
+    if (e.target.id === 'btn-end-session') {
+      showConfirm('确定打烊？今晚的销售记录会被归档。', false, () => {
+        const session = getActiveSession();
+        if (session) {
+          session.endTime = new Date().toISOString();
+          dbSave();
+        }
+        renderTonight();
+      });
+    }
+    if (e.target.id === 'btn-add-sale') openSaleWizard();
+  });
+
+  // 销售卡片点击 → 评价优先，否则弹出操作抽屉
+  let activeSaleId = null;
+  $('#tonight-sales').addEventListener('click', e => {
+    const ratingBtn = e.target.closest('.rating-btn');
+    if (ratingBtn) {
+      toggleRating(ratingBtn.dataset.saleId, ratingBtn.dataset.action);
+      renderTonight();
+      return;
+    }
+    const card = e.target.closest('.sale-item');
+    if (card) {
+      activeSaleId = card.dataset.saleId;
+      $('#action-sheet').classList.add('open');
+    }
+  });
+
+  // 关闭销售向导
+  $('#sale-close').addEventListener('click', closeSaleWizard);
+
+  // Step 1: 选择客人
+  $('#customer-grid').addEventListener('click', e => {
+    const item = e.target.closest('.wizard-item');
+    if (!item) return;
+    saleData.customerId = item.dataset.customerId || null;
+    saleData.customerName = item.dataset.customerName || '散客';
+    goToSaleStep(2);
+  });
+
+  // Step 2: 选择酒
+  $('#drink-grid').addEventListener('click', e => {
+    const item = e.target.closest('.wizard-item');
+    if (!item) return;
+    saleData.recipeId = item.dataset.recipeId || null;
+    saleData.recipeName = item.dataset.recipeName;
+    saleData.unitPrice = parseFloat(item.dataset.price) || 0;
+    goToSaleStep(3);
+  });
+
+  // 手动输入酒名
+  $('#btn-manual-drink').addEventListener('click', () => {
+    $('#drink-search').style.display = 'none';
+    $('#drink-grid').style.display = 'none';
+    $('#btn-manual-drink').style.display = 'none';
+    $('#manual-drink-input').style.display = 'block';
+  });
+
+  $('#btn-cancel-manual').addEventListener('click', () => {
+    $('#drink-search').style.display = 'block';
+    $('#drink-grid').style.display = 'grid';
+    $('#btn-manual-drink').style.display = 'block';
+    $('#manual-drink-input').style.display = 'none';
+    $('#manual-drink-name').value = '';
+    $('#manual-drink-price').value = '0';
+  });
+
+  $('#btn-confirm-manual').addEventListener('click', () => {
+    const name = $('#manual-drink-name').value.trim();
+    const price = parseFloat($('#manual-drink-price').value) || 0;
+    if (!name) { showAlert('请输入酒名'); return; }
+    saleData.recipeId = null;
+    saleData.recipeName = name;
+    saleData.unitPrice = price;
+    goToSaleStep(3);
+  });
+
+  // Step 导航
+  $('#sale-back-to-step1').addEventListener('click', () => goToSaleStep(1));
+  $('#sale-back-to-step2').addEventListener('click', () => goToSaleStep(2));
+
+  // 杯数加减
+  $('#sale-cups-minus').addEventListener('click', () => {
+    let n = parseInt($('#sale-cups').textContent);
+    if (n > 1) { n--; $('#sale-cups').textContent = n; updateSaleTotal(); }
+  });
+  $('#sale-cups-plus').addEventListener('click', () => {
+    let n = parseInt($('#sale-cups').textContent);
+    n++; $('#sale-cups').textContent = n; updateSaleTotal();
+  });
+
+  // 单价变化
+  $('#sale-price').addEventListener('input', updateSaleTotal);
+
+  // 保存销售
+  $('#sale-save').addEventListener('click', saveSale);
+
+  // 搜索酒
+  $('#drink-search').addEventListener('input', () => {
+    renderDrinkGrid($('#drink-search').value);
+  });
+
+  // 客人表单
+  $('#btn-add-customer').addEventListener('click', () => openCustomerForm());
+  $('#customer-form-close').addEventListener('click', () => $('#modal-customer').classList.remove('open'));
+  $('#customer-form-save').addEventListener('click', saveCustomer);
+
+  // 客人表单标签
+  let custFormTags = [];
+  $('#customer-form-tag-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      const v = this.value.trim();
+      if (v && !custFormTags.includes(v)) {
+        custFormTags.push(v);
+        renderCustFormTags();
+      }
+      this.value = '';
+    }
+  });
+
+  // 搜索客人
+  $('#customer-search').addEventListener('input', renderCustomers);
+
+  // 客人卡片点击
+  $('#customers-list').addEventListener('click', e => {
+    const card = e.target.closest('.customer-card');
+    if (card) showCustomerDetail(card.dataset.id);
+  });
+
+  // 客人详情页返回
+  $('#customer-detail-back').addEventListener('click', () => {
+    $('#page-customer-detail').classList.remove('open');
+    renderCustomers();
+  });
+
+  // 编辑客人
+  $('#cd-edit-btn').addEventListener('click', () => {
+    const id = $('#page-customer-detail').dataset.id;
+    const c = getCustomer(id);
+    if (!c) return;
+    openCustomerForm(c);
+  });
+
+  // 配方表单
+  $('#btn-add-recipe').addEventListener('click', () => openRecipeForm());
+  $('#recipe-form-close').addEventListener('click', () => $('#modal-recipe').classList.remove('open'));
+  $('#recipe-form-save').addEventListener('click', saveRecipe);
+
+  // 搜索配方
+  $('#recipe-search').addEventListener('input', renderRecipes);
+  $('#recipe-tag-filter').addEventListener('change', renderRecipes);
+
+  // 配方卡片点击
+  $('#recipes-list').addEventListener('click', e => {
+    const card = e.target.closest('.recipe-card');
+    if (card) showRecipeDetail(card.dataset.id);
+  });
+
+  // 配方详情页返回
+  $('#recipe-detail-back').addEventListener('click', () => {
+    $('#page-recipe-detail').classList.remove('open');
+    renderRecipes();
+  });
+
+  // 编辑配方
+  $('#rd-edit-btn').addEventListener('click', () => {
+    const id = $('#page-recipe-detail').dataset.id;
+    const r = getRecipe(id);
+    if (!r) return;
+    openRecipeForm(r);
+  });
+
+  // 报表筛选
+  $('#report-filters').addEventListener('click', e => {
+    const btn = e.target.closest('[data-period]');
+    if (!btn) return;
+    reportPeriod = btn.dataset.period;
+    $$('#report-filters .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (reportPeriod === 'custom') {
+      $('#report-custom-dates').style.display = 'flex';
+    } else {
+      $('#report-custom-dates').style.display = 'none';
+      renderReports();
+    }
+  });
+
+  $('#btn-apply-custom').addEventListener('click', () => {
+    reportCustomFrom = $('#report-date-from').value;
+    reportCustomTo = $('#report-date-to').value;
+    renderReports();
+  });
+
+  // 日历格子点击
+  $('#reports-content').addEventListener('click', e => {
+    const cell = e.target.closest('.cal-cell.has-data');
+    if (cell) showDayHistory(cell.dataset.date);
+    if (e.target.id === 'btn-clear-all') clearAllData();
+  });
+
+  // 关闭模态框（点击遮罩）
+  $$('.modal-overlay').forEach(overlay => {
+    if (overlay.id === 'modal-confirm' || overlay.id === 'modal-alert') return;
+    overlay.addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('open');
+    });
+  });
+
+  $('#action-sheet').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  // 历史日：返回
+  $('#day-history-back').addEventListener('click', () => {
+    $('#page-day-history').classList.remove('open');
+    renderReports();
+  });
+
+  // 历史日：补录销售
+  $('#dh-footer').addEventListener('click', e => {
+    if (e.target.id === 'btn-history-add') openHistoryAddSale();
+  });
+
+  // 历史日：评价优先，否则操作抽屉
+  $('#dh-sales').addEventListener('click', e => {
+    const ratingBtn = e.target.closest('.rating-btn');
+    if (ratingBtn) {
+      toggleRating(ratingBtn.dataset.saleId, ratingBtn.dataset.action);
+      renderDayHistory();
+      return;
+    }
+    const card = e.target.closest('.sale-item');
+    if (card) {
+      activeSaleId = card.dataset.saleId;
+      $('#action-sheet').classList.add('open');
+    }
+  });
+
+  // 操作抽屉：编辑（今晚=无确认，历史=两次确认）
+  $('#action-edit').addEventListener('click', () => {
+    $('#action-sheet').classList.remove('open');
+    if (!activeSaleId) return;
+    const isHistory = $('#page-day-history').classList.contains('open');
+    if (isHistory) {
+      showConfirm('确定编辑这条历史销售记录吗？这会改变过往营业报表数字。', true, () => {
+        showConfirm('二次确认：确认修改？', true, () => {
+          editSale(activeSaleId);
+        });
+      });
+    } else {
+      editSale(activeSaleId);
+    }
+  });
+
+  // 操作抽屉：删除（今晚=一次确认，历史=两次确认）
+  $('#action-delete').addEventListener('click', () => {
+    $('#action-sheet').classList.remove('open');
+    if (!activeSaleId) return;
+    const isHistory = $('#page-day-history').classList.contains('open');
+    if (isHistory) {
+      showConfirm('确定删除这条历史销售记录吗？这会影响过往营业报表数字。', true, () => {
+        showConfirm('二次确认：删除后无法恢复，确定？', true, () => {
+          DB.sales = DB.sales.filter(s => s.id !== activeSaleId);
+          dbSave();
+          deleteFromSupabase('sales', activeSaleId);
+          renderDayHistory();
+          renderReports();
+        });
+      });
+    } else {
+      showConfirm('删除这条销售记录吗？', true, () => {
+        DB.sales = DB.sales.filter(s => s.id !== activeSaleId);
+        dbSave();
+        deleteFromSupabase('sales', activeSaleId);
+        renderTonight();
+      });
+    }
+  });
+
+  // 操作抽屉：取消
+  $('#action-cancel').addEventListener('click', () => {
+    $('#action-sheet').classList.remove('open');
+    activeSaleId = null;
+  });
+}
+
+// ===== 销售向导 =====
+let saleData = {};
+
+function openSaleWizard() {
+  saleData = { editId: null, customerId: null, customerName: '散客', recipeId: null, recipeName: '', unitPrice: 0, cups: 1 };
+  historyAddDate = null;
+  goToSaleStep(1);
+  $('#sale-title').textContent = '新增销售';
+  $('#modal-sale').classList.add('open');
+  renderCustomerGrid();
+}
+
+function openHistoryAddSale() {
+  showConfirm('确定在这天补录一笔销售吗？这会改变过往营业报表数字。', true, () => {
+    showConfirm('二次确认：确认补录？', true, () => {
+      saleData = { editId: null, customerId: null, customerName: '散客', recipeId: null, recipeName: '', unitPrice: 0, cups: 1 };
+      historyAddDate = historyDay;
+      goToSaleStep(1);
+      $('#sale-title').textContent = '补录销售 - ' + historyDay;
+      $('#modal-sale').classList.add('open');
+      renderCustomerGrid();
+    });
+  });
+}
+
+function closeSaleWizard() {
+  $('#modal-sale').classList.remove('open');
+  saleData.editId = null;
+  historyAddDate = null;
+}
+
+function goToSaleStep(n) {
+  $$('#sale-modal-inner .wizard-step').forEach(el => el.classList.remove('active'));
+  $(`#sale-step${n}`).classList.add('active');
+  if (n === 1) {
+    $('#sale-title').textContent = '选择客人';
+    renderCustomerGrid();
+  } else if (n === 2) {
+    $('#sale-title').textContent = '选择酒水';
+    $('#drink-search').value = '';
+    $('#drink-search').style.display = 'block';
+    $('#drink-grid').style.display = 'grid';
+    $('#btn-manual-drink').style.display = 'block';
+    $('#manual-drink-input').style.display = 'none';
+    $('#manual-drink-name').value = '';
+    $('#manual-drink-price').value = '0';
+    renderDrinkGrid('');
+  } else if (n === 3) {
+    $('#sale-title').textContent = '确认销售';
+    $('#sale3-customer').textContent = saleData.customerName;
+    $('#sale3-drink').textContent = saleData.recipeName;
+    $('#sale-cups').textContent = '1';
+    $('#sale-price').value = saleData.unitPrice;
+    saleData.cups = 1;
+    updateSaleTotal();
+  }
+}
+
+function renderCustomerGrid() {
+  let html = '<div class="wizard-item" data-customer-id="" data-customer-name="散客" style="grid-column:1/-1;background:rgba(255,107,53,0.15)">👤 散客</div>';
+
+  // 最近消费的客人优先
+  const recentCustomerIds = [];
+  const seen = new Set();
+  const sortedSales = DB.sales.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  for (const s of sortedSales) {
+    if (s.customerId && !seen.has(s.customerId)) {
+      seen.add(s.customerId);
+      recentCustomerIds.push(s.customerId);
+    }
+  }
+
+  const shown = new Set();
+  for (const cid of recentCustomerIds.slice(0, CONFIG.maxRecentCustomers)) {
+    const c = getCustomer(cid);
+    if (c) {
+      shown.add(cid);
+      html += `<div class="wizard-item" data-customer-id="${c.id}" data-customer-name="${escHtml(c.name)}">${escHtml(c.name)}</div>`;
+    }
+  }
+
+  // 补齐未显示的老客人
+  for (const c of DB.customers) {
+    if (!shown.has(c.id) && shown.size < CONFIG.maxRecentCustomers) {
+      shown.add(c.id);
+      html += `<div class="wizard-item" data-customer-id="${c.id}" data-customer-name="${escHtml(c.name)}">${escHtml(c.name)}</div>`;
+    }
+  }
+
+  $('#customer-grid').innerHTML = html;
+}
+
+function renderDrinkGrid(search) {
+  let recipes = DB.recipes;
+  if (search) {
+    const q = search.toLowerCase();
+    recipes = recipes.filter(r => r.name.toLowerCase().includes(q) || (r.tags || []).some(t => t.toLowerCase().includes(q)));
+  }
+
+  // 按点单频次排序
+  const orderCounts = {};
+  DB.sales.forEach(s => {
+    if (s.recipeId) orderCounts[s.recipeId] = (orderCounts[s.recipeId] || 0) + s.cups;
+  });
+  recipes = [...recipes].sort((a, b) => (orderCounts[b.id] || 0) - (orderCounts[a.id] || 0));
+
+  const show = recipes.slice(0, CONFIG.maxRecentRecipes);
+
+  if (show.length === 0) {
+    $('#drink-grid').innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px">没有匹配的配方</div>';
+  } else {
+    $('#drink-grid').innerHTML = show.map(r => `
+      <div class="wizard-item" data-recipe-id="${r.id}" data-recipe-name="${escHtml(r.name)}" data-price="${r.defaultPrice}">
+        <div style="font-weight:600">${escHtml(r.name)}</div>
+        <div style="font-size:var(--font-sm);color:var(--text-secondary)">${fmtMoney(r.defaultPrice)}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function updateSaleTotal() {
+  const cups = parseInt($('#sale-cups').textContent) || 1;
+  const price = parseFloat($('#sale-price').value) || 0;
+  saleData.cups = cups;
+  saleData.unitPrice = price;
+  $('#sale-total').textContent = fmtMoney(cups * price);
+}
+
+function saveSale() {
+  const session = getActiveSession();
+  if (!session && !historyAddDate) { showAlert('请先开始营业'); closeSaleWizard(); return; }
+
+  const cups = parseInt($('#sale-cups').textContent) || 1;
+  const unitPrice = parseFloat($('#sale-price').value) || 0;
+
+  if (!saleData.recipeName.trim()) { showAlert('请输入酒名'); return; }
+  if (unitPrice <= 0) { showAlert('请输入有效单价'); return; }
+
+  if (saleData.editId) {
+    const sale = DB.sales.find(s => s.id === saleData.editId);
+    if (sale) {
+      sale.customerId = saleData.customerId || null;
+      sale.customerName = saleData.customerName || '散客';
+      sale.recipeId = saleData.recipeId || null;
+      sale.recipeName = saleData.recipeName;
+      sale.cups = cups;
+      sale.unitPrice = unitPrice;
+      sale.total = cups * unitPrice;
+      sale.recipePriceAtSale = unitPrice;
+      const recipe = saleData.recipeId ? getRecipe(saleData.recipeId) : null;
+      sale.recipeCostAtSale = recipe ? recipe.estimatedCost : 0;
+      sale.recipeProfitAtSale = unitPrice - sale.recipeCostAtSale;
+    }
+  } else {
+    const recipe = saleData.recipeId ? getRecipe(saleData.recipeId) : null;
+    const costAtSale = recipe ? recipe.estimatedCost : 0;
+    const profitAtSale = unitPrice - costAtSale;
+    let createdAt;
+    let sessionId = session ? session.id : null;
+    if (historyAddDate) {
+      createdAt = new Date(historyAddDate + 'T20:00:00').toISOString();
+    } else {
+      createdAt = new Date().toISOString();
+    }
+    DB.sales.push({
+      id: genId(),
+      customerId: saleData.customerId || null,
+      customerName: saleData.customerName || '散客',
+      recipeId: saleData.recipeId || null,
+      recipeName: saleData.recipeName,
+      cups,
+      unitPrice,
+      total: cups * unitPrice,
+      recipePriceAtSale: unitPrice,
+      recipeCostAtSale: costAtSale,
+      recipeProfitAtSale: profitAtSale,
+      createdAt,
+      sessionId,
+      rating: null
+    });
+  }
+  dbSave();
+  closeSaleWizard();
+  const isHistory = $('#page-day-history').classList.contains('open');
+  if (historyAddDate) {
+    historyAddDate = null;
+    renderDayHistory();
+  } else if (isHistory) {
+    renderDayHistory();
+  } else {
+    renderTonight();
+  }
+}
+
+function editSale(id) {
+  const sale = DB.sales.find(s => s.id === id);
+  if (!sale) return;
+
+  saleData = {
+    editId: id,
+    customerId: sale.customerId,
+    customerName: sale.customerName,
+    recipeId: sale.recipeId,
+    recipeName: sale.recipeName,
+    unitPrice: sale.unitPrice,
+    cups: sale.cups
+  };
+
+  $('#sale-title').textContent = '编辑销售';
+  goToSaleStep(3);
+
+  $('#sale3-customer').textContent = saleData.customerName;
+  $('#sale3-drink').textContent = saleData.recipeName;
+  $('#sale-cups').textContent = sale.cups;
+  $('#sale-price').value = sale.unitPrice;
+  updateSaleTotal();
+
+  $('#modal-sale').classList.add('open');
+}
+
+function deleteSale(id) {
+  showConfirm('删除这条销售记录吗？', true, () => {
+    DB.sales = DB.sales.filter(s => s.id !== id);
+    dbSave();
+    deleteFromSupabase('sales', id);
+    renderTonight();
+  });
+}
+
+// ===== 客人表单 =====
+function openCustomerForm(existing) {
+  custFormTags = existing ? [...(existing.tags || [])] : [];
+  $('#customer-form-id').value = existing ? existing.id : '';
+  $('#customer-form-name').value = existing ? existing.name : '';
+  $('#customer-form-notes').value = existing ? existing.notes || '' : '';
+  $('#customer-form-title').textContent = existing ? '编辑客人' : '新增客人';
+  $('#customer-form-tag-input').value = '';
+  renderCustFormTags();
+  $('#modal-customer').classList.add('open');
+}
+
+function renderCustFormTags() {
+  $('#customer-form-tags').innerHTML = custFormTags.map(t =>
+    `<span class="tag accent">${escHtml(t)}<span class="tag-remove" data-tag="${escHtml(t)}">&times;</span></span>`
+  ).join('');
+
+  $$('#customer-form-tags .tag-remove').forEach(el => {
+    el.addEventListener('click', function() {
+      custFormTags = custFormTags.filter(t => t !== this.dataset.tag);
+      renderCustFormTags();
+    });
+  });
+}
+
+function saveCustomer() {
+  const name = $('#customer-form-name').value.trim();
+  if (!name) { showAlert('请输入客人名字'); return; }
+  const id = $('#customer-form-id').value;
+
+  if (id) {
+    const c = getCustomer(id);
+    if (c) {
+      c.name = name;
+      c.notes = $('#customer-form-notes').value.trim();
+      c.tags = custFormTags;
+    }
+  } else {
+    DB.customers.push({
+      id: genId(),
+      name,
+      notes: $('#customer-form-notes').value.trim(),
+      tags: custFormTags,
+      createdAt: new Date().toISOString()
+    });
+  }
+  dbSave();
+  $('#modal-customer').classList.remove('open');
+  renderCustomers();
+}
+
+// ===== 配方表单 =====
+let recipeFormBaseTags = [];
+let recipeFormFlavorTags = [];
+let recipeFormCustomTags = [];
+
+function openRecipeForm(existing) {
+  recipeFormBaseTags = existing ? existing.tags.filter(t => BASE_LIQUORS.includes(t)) : [];
+  recipeFormFlavorTags = existing ? existing.tags.filter(t => FLAVORS.includes(t)) : [];
+  recipeFormCustomTags = existing ? existing.tags.filter(t => !BASE_LIQUORS.includes(t) && !FLAVORS.includes(t)) : [];
+
+  $('#recipe-form-id').value = existing ? existing.id : '';
+  $('#recipe-form-name').value = existing ? existing.name : '';
+  $('#recipe-form-price').value = existing ? existing.defaultPrice : '';
+  $('#recipe-form-cost').value = existing ? existing.estimatedCost ?? '' : '';
+  $('#recipe-form-ingredients').value = existing ? existing.ingredients || '' : '';
+  $('#recipe-form-steps').value = existing ? existing.steps || '' : '';
+  $('#recipe-form-notes').value = existing ? existing.notes || '' : '';
+  $('#recipe-form-title').textContent = existing ? '编辑配方' : '新增配方';
+  $('#recipe-form-custom-tag').value = '';
+
+  renderRecipeTagSelectors();
+  $('#modal-recipe').classList.add('open');
+}
+
+function renderRecipeTagSelectors() {
+  $('#recipe-form-base-tags').innerHTML = BASE_LIQUORS.map(t =>
+    `<span class="tag ${recipeFormBaseTags.includes(t) ? 'active' : ''}" data-tag="${t}" data-cat="base">${t}</span>`
+  ).join('');
+
+  $('#recipe-form-flavor-tags').innerHTML = FLAVORS.map(t =>
+    `<span class="tag ${recipeFormFlavorTags.includes(t) ? 'active' : ''}" data-tag="${t}" data-cat="flavor">${t}</span>`
+  ).join('');
+
+  $('#recipe-form-custom-tags').innerHTML = recipeFormCustomTags.map(t =>
+    `<span class="tag accent">${escHtml(t)}<span class="tag-remove" data-tag="${escHtml(t)}" data-cat="custom">&times;</span></span>`
+  ).join('');
+
+  // 绑定标签点击
+  $$('#recipe-form-base-tags .tag, #recipe-form-flavor-tags .tag').forEach(el => {
+    el.addEventListener('click', function() {
+      const tag = this.dataset.tag;
+      const cat = this.dataset.cat;
+      if (cat === 'base') {
+        if (recipeFormBaseTags.includes(tag)) recipeFormBaseTags = recipeFormBaseTags.filter(t => t !== tag);
+        else recipeFormBaseTags.push(tag);
+      } else {
+        if (recipeFormFlavorTags.includes(tag)) recipeFormFlavorTags = recipeFormFlavorTags.filter(t => t !== tag);
+        else recipeFormFlavorTags.push(tag);
+      }
+      renderRecipeTagSelectors();
+    });
+  });
+
+  $$('#recipe-form-custom-tags .tag-remove').forEach(el => {
+    el.addEventListener('click', function() {
+      recipeFormCustomTags = recipeFormCustomTags.filter(t => t !== this.dataset.tag);
+      renderRecipeTagSelectors();
+    });
+  });
+}
+
+// 配方自定义标签输入
+$('#recipe-form-custom-tag').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const v = this.value.trim();
+    if (v && !recipeFormCustomTags.includes(v) && !recipeFormBaseTags.includes(v) && !recipeFormFlavorTags.includes(v)) {
+      recipeFormCustomTags.push(v);
+      renderRecipeTagSelectors();
+    }
+    this.value = '';
+  }
+});
+
+function saveRecipe() {
+  const name = $('#recipe-form-name').value.trim();
+  const price = parseFloat($('#recipe-form-price').value);
+  const cost = parseFloat($('#recipe-form-cost').value) || 0;
+  if (!name) { showAlert('请输入酒名'); return; }
+  if (isNaN(price) || price < 0) { showAlert('请输入有效价格'); return; }
+
+  const tags = [...recipeFormBaseTags, ...recipeFormFlavorTags, ...recipeFormCustomTags];
+  const id = $('#recipe-form-id').value;
+
+  if (id) {
+    const r = getRecipe(id);
+    if (r) {
+      r.name = name;
+      r.defaultPrice = price;
+      r.estimatedCost = cost;
+      r.tags = tags;
+      r.ingredients = $('#recipe-form-ingredients').value.trim();
+      r.steps = $('#recipe-form-steps').value.trim();
+      r.notes = $('#recipe-form-notes').value.trim();
+    }
+  } else {
+    DB.recipes.push({
+      id: genId(),
+      name,
+      defaultPrice: price,
+      estimatedCost: cost,
+      tags,
+      ingredients: $('#recipe-form-ingredients').value.trim(),
+      steps: $('#recipe-form-steps').value.trim(),
+      notes: $('#recipe-form-notes').value.trim(),
+      createdAt: new Date().toISOString()
+    });
+  }
+  dbSave();
+  $('#modal-recipe').classList.remove('open');
+  renderRecipes();
+}
+
+// ===== 初始化 =====
+function seedRecipes() {
+  if (DB.recipes.length > 0) return;
+
+  const now = Date.now();
+  const recipes = [
+    {
+      name: "内格罗尼 Negroni",
+      defaultPrice: 30,
+      estimatedCost: 12,
+      tags: ["金酒", "苦", "sharp", "经典"],
+      ingredients: "金酒 40ml\n甜味美思 30ml\n金巴利 20ml",
+      steps: "直调入古典杯，搅拌至充分冷却。橙皮装饰。",
+      notes: ""
+    },
+    {
+      name: "干马天尼 Dry Martini",
+      defaultPrice: 30,
+      estimatedCost: 9,
+      tags: ["金酒", "sharp", "经典"],
+      ingredients: "金酒 60ml\n干味美思 10ml\n橄榄",
+      steps: "金酒和味美思倒入调酒杯，加冰搅拌至充分冷却。过滤至冰镇过的马天尼杯。橄榄装饰。",
+      notes: ""
+    },
+    {
+      name: "教父 Godfather",
+      defaultPrice: 30,
+      estimatedCost: 9,
+      tags: ["威士忌", "甜", "经典"],
+      ingredients: "苏格兰威士忌 50ml\n杏仁利口酒 10ml",
+      steps: "直调入古典杯，轻轻搅拌。",
+      notes: ""
+    },
+    {
+      name: "威士忌苏打 Highball",
+      defaultPrice: 30,
+      estimatedCost: 10,
+      tags: ["威士忌", "清爽", "Highball", "经典"],
+      ingredients: "威士忌 45ml\n苏打水 适量\n柠檬片",
+      steps: "高球杯装冰，倒入威士忌，再加冰镇苏打水。轻搅一次。柠檬片装饰。",
+      notes: ""
+    },
+    {
+      name: "金汤力 Gin & Tonic",
+      defaultPrice: 30,
+      estimatedCost: 16,
+      tags: ["金酒", "清爽", "Highball", "经典"],
+      ingredients: "金酒 45ml\n汤力水 适量\n青柠",
+      steps: "高球杯装冰，倒入金酒，再加冰镇汤力水。轻搅。青柠角装饰。",
+      notes: ""
+    },
+    {
+      name: "长岛冰茶 Long Island Iced Tea",
+      defaultPrice: 30,
+      estimatedCost: 15,
+      tags: ["混合烈酒", "sharp", "强烈", "经典"],
+      ingredients: "伏特加 15ml\n金酒 15ml\n白朗姆 15ml\n龙舌兰 15ml\n橙皮利口酒 15ml\n青柠汁 25ml\n糖浆 5ml\n可乐 适量",
+      steps: "除可乐外所有材料加冰摇匀。倒入装满冰的高球杯。补满可乐。柠檬角装饰。",
+      notes: ""
+    },
+    {
+      name: "得其利 Daiquiri",
+      defaultPrice: 30,
+      estimatedCost: 9,
+      tags: ["朗姆", "酸", "经典"],
+      ingredients: "朗姆酒 45ml\n青柠汁 20ml\n糖浆 15ml",
+      steps: "所有材料加冰摇匀，过滤至冰镇过的鸡尾酒杯。",
+      notes: ""
+    },
+    {
+      name: "吉姆雷特 Gimlet",
+      defaultPrice: 30,
+      estimatedCost: 10,
+      tags: ["金酒", "酸", "经典"],
+      ingredients: "金酒 45ml\n新鲜青柠汁 15ml\n糖浆 10ml",
+      steps: "所有材料加冰摇匀，过滤至冰镇过的鸡尾酒杯。",
+      notes: ""
+    },
+    {
+      name: "边车 Sidecar",
+      defaultPrice: 30,
+      estimatedCost: 32,
+      tags: ["白兰地", "酸", "平衡", "经典"],
+      ingredients: "白兰地 45ml\n柑曼怡 22.5ml\n柠檬汁 20ml\n糖浆 3ml",
+      steps: "所有材料加冰摇匀，过滤至冰镇过的鸡尾酒杯。橙皮装饰。",
+      notes: ""
+    },
+    {
+      name: "玛格丽特 Margarita",
+      defaultPrice: 30,
+      estimatedCost: 12,
+      tags: ["龙舌兰", "酸", "经典"],
+      ingredients: "龙舌兰 50ml\n橙皮酒 20ml\n青柠汁 20ml",
+      steps: "所有材料加冰摇匀，过滤至盐边装饰的玛格丽特杯。",
+      notes: ""
+    },
+    {
+      name: "威士忌酸 Whiskey Sour",
+      defaultPrice: 30,
+      estimatedCost: 8,
+      tags: ["威士忌", "酸", "平衡", "经典"],
+      ingredients: "威士忌 45ml\n柠檬汁 20ml\n糖浆 15ml\n蛋清 1 个",
+      steps: "先干摇所有材料让蛋清打发起泡，再加冰摇匀。过滤至岩石杯。樱桃装饰。",
+      notes: ""
+    },
+    {
+      name: "伯爵茶马天尼 Earl Grey Martini",
+      defaultPrice: 30,
+      estimatedCost: 10,
+      tags: ["金酒", "平衡", "清香", "现代经典"],
+      ingredients: "伯爵茶浸泡金酒 45ml\n柠檬汁 20ml\n糖浆 15ml\n蛋清 1 个",
+      steps: "先干摇所有材料让蛋清打发，再加冰摇匀。过滤至马天尼杯。柠檬皮装饰。",
+      notes: ""
+    },
+    {
+      name: "意式浓缩马天尼 Espresso Martini",
+      defaultPrice: 30,
+      estimatedCost: 6,
+      tags: ["伏特加", "咖啡", "现代经典"],
+      ingredients: "伏特加 40ml\n咖啡利口酒 20ml\n意式浓缩咖啡 30ml",
+      steps: "所有材料加冰大力摇匀（要摇出表面的咖啡油泡沫层）。过滤至马天尼杯。三颗咖啡豆装饰。",
+      notes: ""
+    },
+    {
+      name: "盘尼西林 Penicillin",
+      defaultPrice: 30,
+      estimatedCost: 12,
+      tags: ["威士忌", "烟熏", "甜", "酸", "现代经典"],
+      ingredients: "苏格兰威士忌 50ml\n蜂蜜糖浆 20ml\n姜片（smash）\n柠檬汁 20ml\n烟熏威士忌 5ml 漂浮",
+      steps: "姜片先在摇酒壶中 smash 出汁。加入其他材料（除烟熏威士忌）和冰大力摇匀。过滤至古典杯。最上层漂浮 5ml 烟熏威士忌。蜜饯姜片装饰。",
+      notes: ""
+    },
+    {
+      name: "丛林鸟 Jungle Bird",
+      defaultPrice: 30,
+      estimatedCost: 15,
+      tags: ["朗姆", "酸", "苦", "Tiki", "现代经典"],
+      ingredients: "牙买加朗姆 45ml\n金巴利 10ml\n菠萝汁 45ml\n青柠汁 15ml\n糖浆 5ml",
+      steps: "所有材料加冰摇匀。过滤至古典杯。菠萝叶装饰。",
+      notes: ""
+    },
+    {
+      name: "好像有梅子经过 Plum Mirage",
+      defaultPrice: 30,
+      estimatedCost: 14,
+      tags: ["橙皮酒", "咖啡", "平衡", "原创"],
+      ingredients: "君度橙皮酒 30ml\n咖啡利口酒 20ml\n柠檬汁 30ml\n甜味美思 20ml",
+      steps: "所有材料加冰摇匀。过滤至冰镇过的鸡尾酒杯。蜜饯梅子+饼干装饰。",
+      notes: '原创酒。配料中没有梅子，但风味会让人想到梅子——所以叫"好像有梅子经过"。'
+    }
+  ];
+
+  recipes.forEach((r, i) => {
+    DB.recipes.push({
+      id: genId(),
+      name: r.name,
+      defaultPrice: r.defaultPrice,
+      tags: r.tags,
+      ingredients: r.ingredients,
+      steps: r.steps,
+      notes: r.notes,
+      createdAt: new Date(now - (recipes.length - i) * 1000).toISOString()
+    });
+  });
+
+  dbSave();
+}
+
+function clearAllData() {
+  showConfirm('清空所有营业记录吗？客人和配方不会被删除，只清销售记录和营业历史。', true, () => {
+    showConfirm('二次确认：营业记录无法恢复。真的清空？', true, () => {
+      DB.sales = [];
+      DB.sessions = [];
+      dbSave();
+      sb.from('sales').delete().neq('id', '__SKIP__').catch(e => console.error(e));
+      sb.from('sessions').delete().neq('id', '__SKIP__').catch(e => console.error(e));
+      renderTonight();
+    });
+  });
+}
+
+const RECIPE_COSTS = {
+  "Negroni": 12, "Dry Martini": 9, "Godfather": 9, "Highball": 10,
+  "Gin & Tonic": 16, "Long Island Iced Tea": 15, "Daiquiri": 9,
+  "Gimlet": 10, "Sidecar": 32, "Margarita": 12, "Whiskey Sour": 8,
+  "Earl Grey Martini": 10, "Espresso Martini": 6, "Penicillin": 12,
+  "Jungle Bird": 15, "Plum Mirage": 14
+};
+
+function guessCost(recipe) {
+  if (!recipe || !recipe.name) return 0;
+  for (const [key, cost] of Object.entries(RECIPE_COSTS)) {
+    if (recipe.name.includes(key)) return cost;
+  }
+  return 0;
+}
+
+function migrateData() {
+  let changed = false;
+
+  // 配方：补 estimatedCost
+  DB.recipes.forEach(r => {
+    if (r.estimatedCost === undefined) { r.estimatedCost = guessCost(r); changed = true; }
+  });
+
+  // 销售记录：补冻结利润字段
+  DB.sales.forEach(s => {
+    if (s.recipePriceAtSale === undefined) {
+      s.recipePriceAtSale = s.unitPrice;
+      const recipe = s.recipeId ? getRecipe(s.recipeId) : null;
+      s.recipeCostAtSale = recipe ? recipe.estimatedCost : (s.unitPrice * 0.3);
+      s.recipeProfitAtSale = s.recipePriceAtSale - s.recipeCostAtSale;
+      changed = true;
+    }
+    if (s.rating === undefined) { s.rating = null; changed = true; }
+  });
+
+  if (changed) dbSave();
+}
+
+async function init() {
+  bindEvents();
+  await loadFromSupabase();
+  migrateData();
+  seedRecipes();
+  renderTonight();
+
+  // 设置自定义日期默认值
+  const today = todayStr();
+  $('#report-date-from').value = today;
+  $('#report-date-to').value = today;
+}
+
+init();
+</script>
+</body>
+</html>
