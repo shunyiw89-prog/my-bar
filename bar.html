@@ -677,6 +677,45 @@ function syncAllSupabase() {
   }, 300);
 }
 
+async function backfillCosts() {
+  const COST_FIXES = [
+    { match: "Negroni", cost: 12 },
+    { match: "Dry Martini", cost: 9 },
+    { match: "Godfather", cost: 9 },
+    { match: "Highball", cost: 10 },
+    { match: "Gin & Tonic", cost: 16 },
+    { match: "Long Island Iced Tea", cost: 15 },
+    { match: "Daiquiri", cost: 9 },
+    { match: "Gimlet", cost: 10 },
+    { match: "Sidecar", cost: 32 },
+    { match: "Margarita", cost: 12 },
+    { match: "Whiskey Sour", cost: 8 },
+    { match: "Earl Grey Martini", cost: 10 },
+    { match: "Espresso Martini", cost: 6 },
+    { match: "Penicillin", cost: 12 },
+    { match: "Jungle Bird", cost: 15 },
+    { match: "Plum Mirage", cost: 14 }
+  ];
+  const { data, error } = await sb.from('recipes').select('*');
+  if (error) { console.error('读取失败:', error); showAlert('读取失败: ' + error.message); return; }
+  let updatedCount = 0;
+  for (const r of data) {
+    const fix = COST_FIXES.find(f => r.name && r.name.toLowerCase().includes(f.match.toLowerCase()));
+    if (fix) {
+      const { error: updateError } = await sb.from('recipes').update({ estimated_cost: fix.cost }).eq('id', r.id);
+      if (updateError) {
+        console.error('更新 ' + r.name + ' 失败:', updateError);
+      } else {
+        updatedCount++;
+        console.log('✓ ' + r.name + ' → ¥' + fix.cost);
+      }
+    } else {
+      console.warn('未匹配到: ' + r.name);
+    }
+  }
+  showAlert('回填完成。成功更新 ' + updatedCount + ' / ' + data.length + ' 个配方。请刷新页面查看效果。');
+}
+
 async function syncToSupabase(table, data) {
   if (!sb) return;
   try { await sb.from(table).upsert(data); } catch(e) { console.error('Sync error:', e); }
@@ -1160,6 +1199,7 @@ function renderReports() {
   html += renderCalendar();
 
   html += '<div style="margin-top:60px;text-align:center"><span style="font-size:11px;color:rgba(153,153,136,0.25);cursor:pointer" id="btn-clear-all">清空营业记录</span></div>';
+  html += '<div style="margin-top:10px;text-align:center"><span style="font-size:10px;color:rgba(153,153,136,0.18);cursor:pointer" id="btn-backfill-costs">[临时] 回填配方成本</span></div>';
 
   $('#reports-content').innerHTML = html;
 }
@@ -1743,6 +1783,7 @@ function bindEvents() {
     const cell = e.target.closest('.cal-cell.has-data');
     if (cell) showDayHistory(cell.dataset.date);
     if (e.target.id === 'btn-clear-all') clearAllData();
+	    if (e.target.id === 'btn-backfill-costs') backfillCosts();
   });
 
   // 关闭模态框（点击遮罩）
