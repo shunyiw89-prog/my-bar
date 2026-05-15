@@ -2391,6 +2391,87 @@ function seedRecipes() {
   dbSave();
 }
 
+function seedNewRecipes() {
+  const now = Date.now();
+  const newRecipes = [
+    {
+      name: "橄榄油酸 Olive Oil Sour",
+      defaultPrice: 45,
+      estimatedCost: 22,
+      tags: ["威士忌", "酸", "蛋清", "顶级酒吧复刻", "创新"],
+      ingredients: "金宾波本 30ml\n白兰地 20ml\nOloroso 雪莉酒 10ml\n蜂蜜 15ml\n柠檬汁 20ml\n橄榄油 5ml\n蛋清 1 个",
+      steps: "所有材料倒入摇酒壶，先干摇打发蛋清，再加冰大力摇匀。过滤至冰镇过的鸡尾酒杯。撒肉豆蔻碎装饰。",
+      notes: ""
+    },
+    {
+      name: "拉莫斯金菲士 Ramos Gin Fizz",
+      defaultPrice: 45,
+      estimatedCost: 15,
+      tags: ["金酒", "酸", "蛋清", "奶香", "花香", "经典"],
+      ingredients: "金酒 45ml\n柠檬汁 30ml\n糖浆 30ml\n淡奶油 45ml\n蛋清 1 个\n橙花水 4 滴",
+      steps: "除苏打水外所有材料倒入摇酒壶，先长时间干摇打发，再加冰大力摇匀（传统做法需摇 10 分钟以上以拉起奶泡）。海波杯中先加少量冰镇苏打水，缓慢倒入摇匀的酒液，让奶泡缓慢上升超过杯口。",
+      notes: ""
+    },
+    {
+      name: "泰斯卡 10 年 Talisker 10 Years Neat",
+      defaultPrice: 30,
+      estimatedCost: 8,
+      tags: ["威士忌", "单一麦芽", "烟熏", "净饮"],
+      ingredients: "泰斯卡 10 年 30ml",
+      steps: "倒入闻香杯，室温饮用。",
+      notes: ""
+    },
+    {
+      name: "马爹利名仕 Martell Cordon Bleu Neat",
+      defaultPrice: 40,
+      estimatedCost: 16,
+      tags: ["干邑", "净饮"],
+      ingredients: "马爹利名仕 30ml",
+      steps: "倒入闻香杯，室温饮用。",
+      notes: ""
+    },
+    {
+      name: "格兰伯奇 12 年 Glenburgie 12 Years Neat",
+      defaultPrice: 60,
+      estimatedCost: 25,
+      tags: ["威士忌", "单一麦芽", "净饮"],
+      ingredients: "格兰伯奇 12 年 20ml",
+      steps: "倒入闻香杯，配滴瓶加水。",
+      notes: ""
+    }
+  ];
+
+  const matchKeys = ["Olive Oil Sour", "Ramos Gin Fizz", "Talisker", "Cordon Bleu", "Glenburgie"];
+  let addedCount = 0;
+
+  for (let i = 0; i < newRecipes.length; i++) {
+    const key = matchKeys[i];
+    const exists = DB.recipes.some(r => r.name && r.name.toLowerCase().includes(key.toLowerCase()));
+    if (exists) {
+      console.log('跳过已存在: ' + newRecipes[i].name);
+      continue;
+    }
+    DB.recipes.push({
+      id: genId(),
+      name: newRecipes[i].name,
+      defaultPrice: newRecipes[i].defaultPrice,
+      estimatedCost: newRecipes[i].estimatedCost,
+      tags: newRecipes[i].tags,
+      ingredients: newRecipes[i].ingredients,
+      steps: newRecipes[i].steps,
+      notes: newRecipes[i].notes,
+      createdAt: new Date(now - (newRecipes.length - i) * 1000).toISOString()
+    });
+    addedCount++;
+    console.log('新增配方: ' + newRecipes[i].name);
+  }
+
+  if (addedCount > 0) {
+    dbSave();
+    renderRecipes();
+  }
+}
+
 function clearAllData() {
   showConfirm('清空所有营业记录吗？客人和配方不会被删除，只清销售记录和营业历史。', true, () => {
     showConfirm('二次确认：营业记录无法恢复。真的清空？', true, () => {
@@ -2448,6 +2529,7 @@ async function init() {
   await loadFromSupabase();
   seedRecipes();
   migrateData();
+  seedNewRecipes();
   renderTonight();
 
   // 设置自定义日期默认值
