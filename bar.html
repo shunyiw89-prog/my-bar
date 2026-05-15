@@ -2438,10 +2438,37 @@ function seedNewRecipes() {
       ingredients: "格兰伯奇 12 年 20ml",
       steps: "倒入闻香杯，配滴瓶加水。",
       notes: ""
+    },
+    {
+      name: "水牛足迹威士忌酸 Buffalo Trace Whiskey Sour",
+      defaultPrice: 40,
+      estimatedCost: 13.4,
+      tags: ["威士忌", "酸", "平衡", "经典", "品质"],
+      ingredients: "水牛足迹波本 45ml\n柠檬汁 20ml\n糖浆 15ml\n蛋清 1 个",
+      steps: "先干摇所有材料让蛋清打发起泡，再加冰摇匀。过滤至岩石杯。樱桃装饰。",
+      notes: ""
+    },
+    {
+      name: "托马斯亨利金汤力 Thomas Henry Gin & Tonic",
+      defaultPrice: 40,
+      estimatedCost: 20,
+      tags: ["金酒", "清爽", "Highball", "经典", "品质"],
+      ingredients: "金酒 45ml\n托马斯亨利汤力水 适量\n青柠",
+      steps: "高球杯装冰，倒入金酒，再加冰镇托马斯亨利汤力水。轻搅。青柠角装饰。",
+      notes: ""
+    },
+    {
+      name: "Noilly Prat 干马天尼 Noilly Prat Dry Martini",
+      defaultPrice: 40,
+      estimatedCost: 10.5,
+      tags: ["金酒", "sharp", "经典", "品质"],
+      ingredients: "金酒 60ml\nNoilly Prat 干味美思 10ml\n橄榄",
+      steps: "金酒和味美思倒入调酒杯，加冰搅拌至充分冷却。过滤至冰镇过的马天尼杯。橄榄装饰。",
+      notes: ""
     }
   ];
 
-  const matchKeys = ["Olive Oil Sour", "Ramos Gin Fizz", "Talisker", "Cordon Bleu", "Glenburgie"];
+  const matchKeys = ["Olive Oil Sour", "Ramos Gin Fizz", "Talisker", "Cordon Bleu", "Glenburgie", "Buffalo Trace", "Thomas Henry", "Noilly Prat"];
   let addedCount = 0;
 
   for (let i = 0; i < newRecipes.length; i++) {
