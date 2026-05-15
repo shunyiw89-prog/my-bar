@@ -715,7 +715,11 @@ function genId() {
 function $(s) { return document.querySelector(s); }
 function $$(s) { return document.querySelectorAll(s); }
 
-function fmtMoney(n) { return '¥' + Number(n).toFixed(0); }
+function fmtMoney(n) {
+  const num = Number(n);
+  if (isNaN(num)) return '¥0';
+  return '¥' + (num % 1 === 0 ? num.toFixed(0) : num.toFixed(1));
+}
 function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(iso);
