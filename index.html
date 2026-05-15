@@ -677,62 +677,6 @@ function syncAllSupabase() {
   }, 300);
 }
 
-async function backfillCosts() {
-  const COST_FIXES = {
-    "Negroni": 12,
-    "Dry Martini": 9,
-    "Godfather": 9,
-    "Highball": 10,
-    "Gin & Tonic": 16,
-    "Long Island Iced Tea": 15,
-    "Daiquiri": 9,
-    "Gimlet": 10,
-    "Sidecar": 32,
-    "Margarita": 12,
-    "Whiskey Sour": 8,
-    "Earl Grey Martini": 10,
-    "Espresso Martini": 6,
-    "Penicillin": 12,
-    "Jungle Bird": 15,
-    "Plum Mirage": 14
-  };
-
-  let matchedCount = 0;
-  const unmatched = [];
-
-  for (const r of DB.recipes) {
-    let foundCost = null;
-    for (const [key, cost] of Object.entries(COST_FIXES)) {
-      if (r.name && r.name.toLowerCase().includes(key.toLowerCase())) {
-        foundCost = cost;
-        break;
-      }
-    }
-
-    if (foundCost !== null) {
-      r.estimatedCost = foundCost;
-      matchedCount++;
-      console.log('✓ ' + r.name + ' → ¥' + foundCost);
-    } else {
-      unmatched.push(r.name);
-      console.warn('未匹配: ' + r.name);
-    }
-  }
-
-  dbSave();
-
-  await new Promise(r => setTimeout(r, 1500));
-
-  let msg = '本地已更新 ' + matchedCount + '/' + DB.recipes.length + ' 个配方。';
-  if (unmatched.length > 0) {
-    msg += '\n\n未匹配:\n' + unmatched.join('\n');
-  }
-  msg += '\n\n云端同步已触发。如有错误会单独弹出。';
-  showAlert(msg);
-
-  renderRecipes();
-}
-
 async function syncToSupabase(table, data) {
   if (!sb) return;
   try { await sb.from(table).upsert(data); } catch(e) { console.error('Sync error:', e); }
@@ -1216,7 +1160,6 @@ function renderReports() {
   html += renderCalendar();
 
   html += '<div style="margin-top:60px;text-align:center"><span style="font-size:11px;color:rgba(153,153,136,0.25);cursor:pointer" id="btn-clear-all">清空营业记录</span></div>';
-  html += '<div style="margin-top:10px;text-align:center"><span style="font-size:10px;color:rgba(153,153,136,0.18);cursor:pointer" id="btn-backfill-costs">[临时] 回填配方成本</span></div>';
 
   $('#reports-content').innerHTML = html;
 }
@@ -1800,7 +1743,6 @@ function bindEvents() {
     const cell = e.target.closest('.cal-cell.has-data');
     if (cell) showDayHistory(cell.dataset.date);
     if (e.target.id === 'btn-clear-all') clearAllData();
-    if (e.target.id === 'btn-backfill-costs') backfillCosts();
   });
 
   // 关闭模态框（点击遮罩）
