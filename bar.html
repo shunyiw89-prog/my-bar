@@ -1655,7 +1655,6 @@ function bindEvents() {
   $('#customer-form-save').addEventListener('click', saveCustomer);
 
   // 客人表单标签
-  let custFormTags = [];
   $('#customer-form-tag-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       const v = this.value.trim();
@@ -2115,6 +2114,7 @@ function saveCustomer() {
 }
 
 // ===== 配方表单 =====
+let custFormTags = [];
 let recipeFormBaseTags = [];
 let recipeFormFlavorTags = [];
 let recipeFormCustomTags = [];
