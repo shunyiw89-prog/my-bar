@@ -739,6 +739,10 @@ function todayStr() {
   const d = businessNow();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function localDateStr(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function getActiveSession() {
   return DB.sessions.find(s => !s.endTime) || null;
@@ -1076,7 +1080,7 @@ function getReportRange() {
 function renderReports() {
   const { from, to } = getReportRange();
   const sales = DB.sales.filter(s => {
-    const d = s.createdAt ? s.createdAt.slice(0, 10) : '';
+    const d = s.createdAt ? localDateStr(s.createdAt) : '';
     return d >= from && d <= to;
   });
 
@@ -1239,7 +1243,7 @@ function showDayHistory(dateStr) {
 function renderDayHistory() {
   const dateStr = historyDay;
   if (!dateStr) return;
-  const daySales = DB.sales.filter(s => s.createdAt && s.createdAt.slice(0, 10) === dateStr)
+  const daySales = DB.sales.filter(s => s.createdAt && localDateStr(s.createdAt) === dateStr)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const totalCups = daySales.reduce((s, x) => s + x.cups, 0);
   const totalMoney = daySales.reduce((s, x) => s + x.total, 0);
@@ -1283,7 +1287,7 @@ function showCustomerDetail(id) {
   const sales = DB.sales.filter(s => s.customerId === id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const sessionGroups = {};
   sales.forEach(s => {
-    const d = s.createdAt ? s.createdAt.slice(0, 10) : '未知';
+    const d = s.createdAt ? localDateStr(s.createdAt) : '未知';
     if (!sessionGroups[d]) sessionGroups[d] = [];
     sessionGroups[d].push(s);
   });
