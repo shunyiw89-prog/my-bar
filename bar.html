@@ -870,7 +870,7 @@ function genReason(profile, recipe, matchedTags) {
 function renderSaleCard(s, live) {
   let recipeName = s.recipeName, unitPrice = s.unitPrice, customerName = s.customerName;
   if (live) {
-    if (s.recipeId) { const rc = getRecipe(s.recipeId); if (rc) { recipeName = rc.name; unitPrice = rc.price; } }
+    if (s.recipeId) { const rc = getRecipe(s.recipeId); if (rc) { recipeName = rc.name; unitPrice = rc.defaultPrice; } }
     if (s.customerId) { const ct = getCustomer(s.customerId); if (ct) customerName = ct.name; }
   }
   const total = live ? s.cups * unitPrice : s.total;
@@ -926,7 +926,7 @@ function renderTonight() {
   }
 
   const sales = getSalesBySession(session.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  function livePrice(s) { if (s.recipeId) { const rc = getRecipe(s.recipeId); if (rc) return rc.price; } return s.unitPrice; }
+  function livePrice(s) { if (s.recipeId) { const rc = getRecipe(s.recipeId); if (rc) return rc.defaultPrice; } return s.unitPrice; }
   const totalCups = sales.reduce((s, x) => s + x.cups, 0);
   const totalMoney = sales.reduce((s, x) => s + x.cups * livePrice(x), 0);
 
@@ -2052,7 +2052,7 @@ function editSale(id) {
 
   let recipeName = sale.recipeName, unitPrice = sale.unitPrice, customerName = sale.customerName;
   if (isActive) {
-    if (sale.recipeId) { const rc = getRecipe(sale.recipeId); if (rc) { recipeName = rc.name; unitPrice = rc.price; } }
+    if (sale.recipeId) { const rc = getRecipe(sale.recipeId); if (rc) { recipeName = rc.name; unitPrice = rc.defaultPrice; } }
     if (sale.customerId) { const ct = getCustomer(sale.customerId); if (ct) customerName = ct.name; }
   }
 
