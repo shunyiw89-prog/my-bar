@@ -863,16 +863,22 @@ function genReason(profile, recipe, matchedTags) {
 }
 
 // ===== 共享销售卡片 =====
-function renderSaleCard(s) {
+function renderSaleCard(s, live) {
+  let recipeName = s.recipeName, unitPrice = s.unitPrice, customerName = s.customerName;
+  if (live) {
+    if (s.recipeId) { const rc = getRecipe(s.recipeId); if (rc) { recipeName = rc.name; unitPrice = rc.price; } }
+    if (s.customerId) { const ct = getCustomer(s.customerId); if (ct) customerName = ct.name; }
+  }
+  const total = live ? s.cups * unitPrice : s.total;
   const r = s.rating;
   return `
     <div class="card sale-item" data-sale-id="${s.id}" style="cursor:pointer">
       <div class="card-header">
-        <span class="card-title">${escHtml(s.recipeName)}</span>
-        <span style="font-weight:600;color:var(--accent);font-family:var(--font-mono)">${fmtMoney(s.total)}</span>
+        <span class="card-title">${escHtml(recipeName)}</span>
+        <span style="font-weight:600;color:var(--accent);font-family:var(--font-mono)">${fmtMoney(total)}</span>
       </div>
       <div class="card-subtitle">
-        ${escHtml(s.customerName)} · ${s.cups}杯 × ${fmtMoney(s.unitPrice)}
+        ${escHtml(customerName)} · ${s.cups}杯 × ${fmtMoney(unitPrice)}
         <span style="float:right">${new Date(s.createdAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}</span>
       </div>
       <div class="rating-btns">
@@ -916,8 +922,9 @@ function renderTonight() {
   }
 
   const sales = getSalesBySession(session.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  function livePrice(s) { if (s.recipeId) { const rc = getRecipe(s.recipeId); if (rc) return rc.price; } return s.unitPrice; }
   const totalCups = sales.reduce((s, x) => s + x.cups, 0);
-  const totalMoney = sales.reduce((s, x) => s + x.total, 0);
+  const totalMoney = sales.reduce((s, x) => s + x.cups * livePrice(x), 0);
 
   area.innerHTML = `
     <div style="text-align:center;padding:20px 0">
@@ -934,7 +941,7 @@ function renderTonight() {
       <div class="quote-author">${escHtml(q.author)}</div>
     </div>`;
   } else {
-    salesHTML = sales.map(s => renderSaleCard(s)).join('');
+    salesHTML = sales.map(s => renderSaleCard(s, true)).join('');
   }
   $('#tonight-sales').innerHTML = salesHTML;
 
@@ -2037,13 +2044,22 @@ function editSale(id) {
   const sale = DB.sales.find(s => s.id === id);
   if (!sale) return;
 
+  const session = sale.sessionId ? DB.sessions.find(s => s.id === sale.sessionId) : null;
+  const isActive = session && !session.endTime;
+
+  let recipeName = sale.recipeName, unitPrice = sale.unitPrice, customerName = sale.customerName;
+  if (isActive) {
+    if (sale.recipeId) { const rc = getRecipe(sale.recipeId); if (rc) { recipeName = rc.name; unitPrice = rc.price; } }
+    if (sale.customerId) { const ct = getCustomer(sale.customerId); if (ct) customerName = ct.name; }
+  }
+
   saleData = {
     editId: id,
     customerId: sale.customerId,
-    customerName: sale.customerName,
+    customerName,
     recipeId: sale.recipeId,
-    recipeName: sale.recipeName,
-    unitPrice: sale.unitPrice,
+    recipeName,
+    unitPrice,
     cups: sale.cups
   };
 
