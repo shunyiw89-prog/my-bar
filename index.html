@@ -730,8 +730,13 @@ function fmtDateTime(iso) {
   const d = new Date(iso);
   return `${fmtDate(iso)} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
-function todayStr() {
+function businessNow() {
   const d = new Date();
+  if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+  return d;
+}
+function todayStr() {
+  const d = businessNow();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
@@ -1031,7 +1036,7 @@ let reportCustomFrom = null;
 let reportCustomTo = null;
 
 function getReportRange() {
-  const now = new Date();
+  const now = businessNow();
   let from, to;
   switch (reportPeriod) {
     case 'today':
@@ -1169,7 +1174,7 @@ function renderReports() {
 }
 
 function renderCalendar() {
-  const now = new Date();
+  const now = businessNow();
   const year = now.getFullYear();
   const month = now.getMonth(); // 0-based
 
