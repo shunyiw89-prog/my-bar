@@ -224,10 +224,6 @@ input:focus, textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
 .cal-rev { font-size: 9px; color: var(--accent); }
 
 /* ===== 星评 ===== */
-.stars { display: inline-flex; gap: 2px; }
-.star { font-size: 20px; cursor: pointer; color: var(--text-secondary); }
-.star.on { color: #f5a623; }
-
 /* ===== 操作抽屉 ===== */
 .action-sheet-overlay {
   position: fixed; inset: 0; z-index: 250;
@@ -637,7 +633,7 @@ function loadDB() {
     const raw = localStorage.getItem(DB_KEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  return { customers: [], recipes: [], sales: [], ratings: [], sessions: [] };
+  return { customers: [], recipes: [], sales: [], sessions: [] };
 }
 
 let DB = loadDB();
@@ -671,7 +667,6 @@ function syncAllSupabase() {
       if (DB.customers.length) await sb.from('customers').upsert(DB.customers.map(toSnakeCase));
       if (DB.recipes.length) await sb.from('recipes').upsert(DB.recipes.map(toSnakeCase));
       if (DB.sales.length) await sb.from('sales').upsert(DB.sales.map(toSnakeCase));
-      if (DB.ratings.length) await sb.from('ratings').upsert(DB.ratings.map(toSnakeCase));
       if (DB.sessions.length) await sb.from('sessions').upsert(DB.sessions.map(toSnakeCase));
     } catch(e) { console.error('Sync error:', e); }
   }, 300);
@@ -689,15 +684,14 @@ async function deleteFromSupabase(table, id) {
 
 async function loadFromSupabase() {
   try {
-    const tables = ['customers', 'recipes', 'sales', 'ratings', 'sessions'];
+    const tables = ['customers', 'recipes', 'sales', 'sessions'];
     const results = await Promise.all(
       tables.map(t => sb.from(t).select('*').limit(10000))
     );
     DB.customers = (results[0].data || []).map(toCamelCase);
     DB.recipes = (results[1].data || []).map(toCamelCase);
     DB.sales = (results[2].data || []).map(toCamelCase);
-    DB.ratings = (results[3].data || []).map(toCamelCase);
-    DB.sessions = (results[4].data || []).map(toCamelCase);
+    DB.sessions = (results[3].data || []).map(toCamelCase);
     dbSave();
     return true;
   } catch(e) {
@@ -1407,19 +1401,10 @@ function showRecipeDetail(id) {
     html += '<div class="empty-state" style="padding:12px"><div style="font-size:var(--font-sm)">还没有人点过</div></div>';
   } else {
     html += customerList.map(([cid, info]) => {
-      const rating = DB.ratings.find(rt => rt.customerId === cid && rt.recipeId === id);
-      const starHtml = renderStars(rating ? rating.stars : 0, cid, id);
       return `<div class="card">
         <div class="card-header">
           <span class="card-title">${escHtml(info.name)}</span>
           <span style="color:var(--text-secondary)">${info.cups}杯</span>
-        </div>
-        <div style="margin-top:4px">
-          <span style="font-size:var(--font-sm);color:var(--text-secondary)">评价：</span>
-          ${starHtml}
-        </div>
-        <div style="margin-top:4px">
-          <input class="rating-note" data-customer="${cid}" data-recipe="${id}" placeholder="添加评价备注…" value="${escHtml(rating?.note || '')}" style="font-size:var(--font-sm)">
         </div>
       </div>`;
     }).join('');
@@ -1432,69 +1417,6 @@ function showRecipeDetail(id) {
 
   $('#rd-delete-btn').addEventListener('click', () => deleteRecipe(id));
 
-  // 绑定星评事件
-  $$('#rd-content .star').forEach(el => {
-    el.addEventListener('click', function() {
-      const customerId = this.dataset.customer;
-      const recipeId = this.dataset.recipe;
-      const stars = parseInt(this.dataset.stars);
-      setRating(customerId, recipeId, stars);
-      showRecipeDetail(id);
-    });
-  });
-
-  // 绑定备注输入
-  $$('#rd-content .rating-note').forEach(el => {
-    el.addEventListener('change', function() {
-      const customerId = this.dataset.customer;
-      const recipeId = this.dataset.recipe;
-      saveRatingNote(customerId, recipeId, this.value);
-    });
-  });
-}
-
-function renderStars(stars, customerId, recipeId) {
-  let html = '<span class="stars">';
-  for (let i = 1; i <= 5; i++) {
-    html += `<span class="star ${i <= stars ? 'on' : ''}" data-stars="${i}" data-customer="${customerId}" data-recipe="${recipeId}">${i <= stars ? '★' : '☆'}</span>`;
-  }
-  html += '</span>';
-  return html;
-}
-
-function setRating(customerId, recipeId, stars) {
-  let r = DB.ratings.find(rt => rt.customerId === customerId && rt.recipeId === recipeId);
-  if (r) {
-    r.stars = stars;
-    r.createdAt = new Date().toISOString();
-  } else {
-    DB.ratings.push({
-      id: genId(),
-      customerId,
-      recipeId,
-      stars,
-      note: '',
-      createdAt: new Date().toISOString()
-    });
-  }
-  dbSave();
-}
-
-function saveRatingNote(customerId, recipeId, note) {
-  let r = DB.ratings.find(rt => rt.customerId === customerId && rt.recipeId === recipeId);
-  if (r) {
-    r.note = note;
-  } else {
-    DB.ratings.push({
-      id: genId(),
-      customerId,
-      recipeId,
-      stars: 0,
-      note,
-      createdAt: new Date().toISOString()
-    });
-  }
-  dbSave();
 }
 
 // ===== 自定义弹窗 =====
