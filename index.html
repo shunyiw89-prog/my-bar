@@ -453,7 +453,10 @@ input:focus, textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
     <input id="customer-form-name" placeholder="客人名字">
     <textarea id="customer-form-notes" placeholder="备注（印象、忌口、生日等）" style="margin-top:8px"></textarea>
     <div style="margin-top:8px">
-      <input id="customer-form-tag-input" placeholder="添加标签，回车确认">
+      <div style="display:flex;gap:6px;align-items:stretch">
+        <input id="customer-form-tag-input" placeholder="添加标签" style="flex:1">
+        <button type="button" id="customer-form-tag-add" class="btn btn-primary" style="padding:0 16px;flex-shrink:0">+</button>
+      </div>
       <div id="customer-form-tags" style="margin-top:4px"></div>
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:12px" id="customer-form-save">保存</button>
@@ -481,7 +484,10 @@ input:focus, textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
       <div id="recipe-form-flavor-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
     </div>
     <div style="margin-top:8px">
-      <input id="recipe-form-custom-tag" placeholder="自定义标签，回车确认">
+      <div style="display:flex;gap:6px;align-items:stretch">
+        <input id="recipe-form-custom-tag" placeholder="自定义标签" style="flex:1">
+        <button type="button" id="recipe-form-custom-tag-add" class="btn btn-primary" style="padding:0 16px;flex-shrink:0">+</button>
+      </div>
       <div id="recipe-form-custom-tags" style="margin-top:4px"></div>
     </div>
     <textarea id="recipe-form-ingredients" placeholder="配料表" style="margin-top:8px"></textarea>
@@ -1594,15 +1600,27 @@ function bindEvents() {
   $('#customer-form-save').addEventListener('click', saveCustomer);
 
   // 客人表单标签
+  function addCustomerTag() {
+    const input = $('#customer-form-tag-input');
+    const v = input.value.trim();
+    if (v && !custFormTags.includes(v)) {
+      custFormTags.push(v);
+      renderCustFormTags();
+    }
+    input.value = '';
+    input.focus();
+  }
+
   $('#customer-form-tag-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      const v = this.value.trim();
-      if (v && !custFormTags.includes(v)) {
-        custFormTags.push(v);
-        renderCustFormTags();
-      }
-      this.value = '';
+      e.preventDefault();
+      addCustomerTag();
     }
+  });
+
+  $('#customer-form-tag-add').addEventListener('click', function(e) {
+    e.preventDefault();
+    addCustomerTag();
   });
 
   // 搜索客人
@@ -2131,15 +2149,27 @@ function renderRecipeTagSelectors() {
 }
 
 // 配方自定义标签输入
+function addRecipeCustomTag() {
+  const input = $('#recipe-form-custom-tag');
+  const v = input.value.trim();
+  if (v && !recipeFormCustomTags.includes(v) && !recipeFormBaseTags.includes(v) && !recipeFormFlavorTags.includes(v)) {
+    recipeFormCustomTags.push(v);
+    renderRecipeTagSelectors();
+  }
+  input.value = '';
+  input.focus();
+}
+
 $('#recipe-form-custom-tag').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') {
-    const v = this.value.trim();
-    if (v && !recipeFormCustomTags.includes(v) && !recipeFormBaseTags.includes(v) && !recipeFormFlavorTags.includes(v)) {
-      recipeFormCustomTags.push(v);
-      renderRecipeTagSelectors();
-    }
-    this.value = '';
+    e.preventDefault();
+    addRecipeCustomTag();
   }
+});
+
+$('#recipe-form-custom-tag-add').addEventListener('click', function(e) {
+  e.preventDefault();
+  addRecipeCustomTag();
 });
 
 function saveRecipe() {
