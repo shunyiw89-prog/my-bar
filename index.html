@@ -2059,6 +2059,13 @@ function saveCustomer() {
   dbSave();
   $('#modal-customer').classList.remove('open');
   renderCustomers();
+  // 如果当前客人详情页是打开的,关闭modal后刷新它
+  const cdPage = $('#page-customer-detail');
+  if (cdPage.classList.contains('open')) {
+    const currentId = cdPage.dataset.id;
+    const savedId = id || DB.customers[DB.customers.length - 1].id;
+    if (currentId === savedId) showCustomerDetail(currentId);
+  }
 }
 
 // ===== 配方表单 =====
@@ -2172,6 +2179,13 @@ function saveRecipe() {
   dbSave();
   $('#modal-recipe').classList.remove('open');
   renderRecipes();
+  // 如果当前配方详情页是打开的,关闭modal后刷新它
+  const rdPage = $('#page-recipe-detail');
+  if (rdPage.classList.contains('open')) {
+    const currentId = rdPage.dataset.id;
+    const savedId = id || DB.recipes[DB.recipes.length - 1].id;
+    if (currentId === savedId) showRecipeDetail(currentId);
+  }
 }
 
 // ===== 初始化 =====
