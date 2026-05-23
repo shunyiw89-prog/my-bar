@@ -223,7 +223,6 @@ input:focus, textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
 .cal-cell.has-data { background: rgba(255,107,53,0.15); cursor: pointer; }
 .cal-rev { font-size: 9px; color: var(--accent); }
 
-/* ===== 星评 ===== */
 /* ===== 操作抽屉 ===== */
 .action-sheet-overlay {
   position: fixed; inset: 0; z-index: 250;
@@ -743,6 +742,12 @@ function localDateStr(iso) {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function businessDateStr(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function getActiveSession() {
   return DB.sessions.find(s => !s.endTime) || null;
@@ -1080,7 +1085,7 @@ function getReportRange() {
 function renderReports() {
   const { from, to } = getReportRange();
   const sales = DB.sales.filter(s => {
-    const d = s.createdAt ? localDateStr(s.createdAt) : '';
+    const d = s.createdAt ? businessDateStr(s.createdAt) : '';
     return d >= from && d <= to;
   });
 
@@ -1180,7 +1185,6 @@ function renderReports() {
   html += renderCalendar();
 
   html += '<div style="margin-top:60px;text-align:center"><span style="font-size:11px;color:rgba(153,153,136,0.25);cursor:pointer" id="btn-clear-all">清空营业记录</span></div>';
-
   $('#reports-content').innerHTML = html;
 }
 
@@ -1244,7 +1248,7 @@ function showDayHistory(dateStr) {
 function renderDayHistory() {
   const dateStr = historyDay;
   if (!dateStr) return;
-  const daySales = DB.sales.filter(s => s.createdAt && localDateStr(s.createdAt) === dateStr)
+  const daySales = DB.sales.filter(s => s.createdAt && businessDateStr(s.createdAt) === dateStr)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const totalCups = daySales.reduce((s, x) => s + x.cups, 0);
   const totalMoney = daySales.reduce((s, x) => s + x.total, 0);
@@ -1288,7 +1292,7 @@ function showCustomerDetail(id) {
   const sales = DB.sales.filter(s => s.customerId === id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const sessionGroups = {};
   sales.forEach(s => {
-    const d = s.createdAt ? localDateStr(s.createdAt) : '未知';
+    const d = s.createdAt ? businessDateStr(s.createdAt) : '未知';
     if (!sessionGroups[d]) sessionGroups[d] = [];
     sessionGroups[d].push(s);
   });
