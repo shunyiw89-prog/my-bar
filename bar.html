@@ -400,7 +400,8 @@ input:focus, textarea:focus { box-shadow: 0 0 0 2px var(--accent); }
     </div>
     <!-- Step 1: 选客人 -->
     <div class="wizard-step active" id="sale-step1">
-      <div class="wizard-grid" id="customer-grid">
+      <input class="wizard-search" id="customer-grid-search" placeholder="搜索客人名字…">
+      <div class="wizard-grid" id="customer-grid" style="max-height:60vh;overflow-y:auto">
         <div class="wizard-item" data-customer-id="" data-customer-name="散客">散客</div>
       </div>
     </div>
@@ -1535,6 +1536,9 @@ function bindEvents() {
     saleData.customerName = item.dataset.customerName || '散客';
     goToSaleStep(2);
   });
+  $('#customer-grid-search').addEventListener('input', e => {
+    renderCustomerGrid(e.target.value);
+  });
 
   // Step 2: 选择酒
   $('#drink-grid').addEventListener('click', e => {
@@ -1803,6 +1807,7 @@ function openSaleWizard() {
   goToSaleStep(1);
   $('#sale-title').textContent = '新增销售';
   $('#modal-sale').classList.add('open');
+  $('#customer-grid-search').value = '';
   renderCustomerGrid();
 }
 
@@ -1814,6 +1819,7 @@ function openHistoryAddSale() {
       goToSaleStep(1);
       $('#sale-title').textContent = '补录销售 - ' + historyDay;
       $('#modal-sale').classList.add('open');
+      $('#customer-grid-search').value = '';
       renderCustomerGrid();
     });
   });
@@ -1852,10 +1858,10 @@ function goToSaleStep(n) {
   }
 }
 
-function renderCustomerGrid() {
+function renderCustomerGrid(search) {
   let html = '<div class="wizard-item" data-customer-id="" data-customer-name="散客" style="grid-column:1/-1;background:rgba(255,107,53,0.15)">👤 散客</div>';
 
-  // 最近消费的客人优先
+  // 最近消费的客人 id 顺序
   const recentCustomerIds = [];
   const seen = new Set();
   const sortedSales = DB.sales.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1866,19 +1872,27 @@ function renderCustomerGrid() {
     }
   }
 
+  // 所有客人按"最近消费优先 + 其他追加"排序
+  const orderedCustomers = [];
   const shown = new Set();
-  for (const cid of recentCustomerIds.slice(0, CONFIG.maxRecentCustomers)) {
+  for (const cid of recentCustomerIds) {
     const c = getCustomer(cid);
-    if (c) {
-      shown.add(cid);
-      html += `<div class="wizard-item" data-customer-id="${c.id}" data-customer-name="${escHtml(c.name)}">${escHtml(c.name)}</div>`;
-    }
+    if (c) { orderedCustomers.push(c); shown.add(cid); }
+  }
+  for (const c of DB.customers) {
+    if (!shown.has(c.id)) { orderedCustomers.push(c); shown.add(c.id); }
   }
 
-  // 补齐未显示的老客人
-  for (const c of DB.customers) {
-    if (!shown.has(c.id) && shown.size < CONFIG.maxRecentCustomers) {
-      shown.add(c.id);
+  let toShow = orderedCustomers;
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    toShow = orderedCustomers.filter(c => c.name && c.name.toLowerCase().includes(q));
+  }
+
+  if (toShow.length === 0) {
+    html += '<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-secondary)">没有匹配的客人</div>';
+  } else {
+    for (const c of toShow) {
       html += `<div class="wizard-item" data-customer-id="${c.id}" data-customer-name="${escHtml(c.name)}">${escHtml(c.name)}</div>`;
     }
   }
